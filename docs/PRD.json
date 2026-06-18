@@ -1,0 +1,568 @@
+{
+  "project": "etf-quant-v2-refactor",
+  "branchName": "mission/etf-quant-v2-refactor",
+  "description": "v2 重构：从'自用工具'到'AI-Native 量化教育产品'。基于 2026-05-18→06-18 的 30 天调研（12 个分批笔记 + 12 节演进复盘 + 96 条教训 + 7 个 v9 tag），彻底重构 ETF 量化投资策略系统。核心转变：(1) 单仓 monorepo；(2) 12 模块独立（业界标准）；(3) 5 skill 业务向（场景驱动）；(4) C2 散户'想学方'目标；(5) AI-Native 而非 AI-Assisted。v1 旧代码 = 考古资料，不污染 v2。",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "建立 monorepo 项目骨架 + 5 大块目录结构",
+      "description": "As a OPC 一人公司, I want 一个清晰的项目骨架 so that 我能在 1 人维护的前提下扩展 12 模块 + 5 skill。",
+      "acceptanceCriteria": [
+        "在 workspace 根新建 `etf_quant_v2/` 目录",
+        "5 大块结构：docs/ src/ skills/ tests/ data/",
+        "src/etf_quant/ 下建 12 个空模块：data_layer/universe/alpha/portfolio/risk/execution/backtest/performance/notify/config/monitor/scheduler/utils/",
+        "每个模块包含 __init__.py + README.md（描述职责 + 输入输出契约）",
+        "pyproject.toml 配置（Python 3.11+）",
+        ".gitignore 排除 data/ etf.db __pycache__ 等",
+        "git commit 含完整骨架"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v2-roadmap/00_evolution_review.md 第 7.1 节（12 模块）+ v2-roadmap/00_background.md 第 5 节（不污染原则）。业界参考：QuantConnect LEAN（19.8k star）+ Zipline（19.9k star）单仓布局 ✅ Verified。\n\n风险：src/ 根目录散落文件（v1 技术债）。预计：1 小时。"
+    },
+    {
+      "id": "US-002",
+      "title": "继承 v1 数据契约（5 Schema + 5 Protocol）",
+      "description": "As a v2 开发者, I want v1 已沉淀的 OHLCVSchema 等 5 Schema + 5 Protocol 直接可用 so that 不用重新发明轮子（v1 教训 L11/L13）。",
+      "acceptanceCriteria": [
+        "复制 v1 src/data/contracts.py → v2 src/etf_quant/data_layer/contracts.py",
+        "5 Schema：OHLCVSchema / IndicatorSchema / SelectorResultSchema / TradeRecordSchema",
+        "5 Protocol：DataLoaderProtocol / IndicatorProtocol / SelectorProtocol / ReportGeneratorProtocol / FetcherProtocol",
+        "扩展 4 个新 Schema：BacktestResultSchema / PerformanceMetricsSchema / PositionStateSchema / DecisionSnapshotSchema",
+        "扩展 3 个新 Protocol：BacktestEngineProtocol / RiskManagerProtocol / ExecutionTrackerProtocol",
+        "tests/contracts/ 16 个测试继承 + 12 个新测试",
+        "总测试数 ≥ 28 通过"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v1 contracts.py 380 行 5 Schema + 5 Protocol（5/29 数据契约化成果）+ v2-roadmap/notes/09_data_layer.md 第 3.2 节。业界参考：MiFID II / QuantConnect Lean / CQRS Event Sourcing ✅ Verified。\n\n风险：契约变更需 CHANGELOG 记录 + major 版本升级。预计：2 小时。"
+    },
+    {
+      "id": "US-003",
+      "title": "Schema v2.0 迁移（继承 v1 7 个迁移 + 新增 schema_version）",
+      "description": "As a v2 DBA, I want 数据库 schema 继承 v1 的 7 个迁移 + 新增 schema_version 表 so that 数据可追溯、迁移可重放。",
+      "acceptanceCriteria": [
+        "schema/migrations/008_inherit_v1_schema.sql 复制 v1 001~007 全部结构",
+        "schema/migrations/009_add_schema_version.sql 新增 schema_version 表",
+        "scripts/init_database.py 集成 schema_version 检查",
+        "etf_names 表结构继承：tradable/pool_role/is_reference",
+        "trade_history 表结构继承：31 字段（含 target_price/stop_loss/schema 006）",
+        "decision_snapshot 表结构继承：14 字段",
+        "迁移脚本可重跑（幂等性：CREATE IF NOT EXISTS）"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v1 schema/migrations/ 7 个文件 + v2-roadmap/notes/09_data_layer.md 第 3.1-3.5 节。教训：DB_PATH 必须绝对路径（教训 L112）。\n\n风险：迁移顺序、字段冲突、index 重建。预计：2 小时。"
+    },
+    {
+      "id": "US-004",
+      "title": "DataLayer 实现（writer + loader + monitor，WAL 模式）",
+      "description": "As a v2 业务模块, I want 通过 DataLayer 读写 SQLite so that 业务代码不直接 sqlite3.connect（规则 15：数据源统一）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/data_layer/writer.py 实现 write_daily/write_pool/write_trade/write_snapshot",
+        "src/etf_quant/data_layer/loader.py 实现 load/load_single/get_date_range",
+        "src/etf_quant/data_layer/monitor.py 实现分钟级监控（updated_at + 完整性 + 交易日）",
+        "WAL 模式启动即启用（解决 database locked）",
+        "_ensure_columns() 启动时校验 schema",
+        "DB_PATH 绝对路径（基于 PROJECT_ROOT）",
+        "tests/unit/test_data_layer.py 30 测试通过",
+        "tests/integration/test_data_integration.py 7 测试通过"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v1 src/data/writer.py 361 行 + loader.py 304 行 + monitor.py。教训：L22/L62/L112（监控阈值动态化 + DB_PATH 绝对路径）。\n\n风险：WAL 模式与并发、迁移冲突。预计：3 小时。"
+    },
+    {
+      "id": "US-005",
+      "title": "Pre-commit 钩子（拦截 sqlite3 直连 + 硬编码 + 跨模块 import）",
+      "description": "As a v2 架构师, I want pre-commit 强制业务代码走 DataLayer so that 规则 15（数据源统一）不被破坏。",
+      "acceptanceCriteria": [
+        ".git/hooks/pre-commit 拦截：业务代码 sqlite3.connect / 硬编码 URL / 跨模块 import 失败",
+        "豁免清单：data_layer/ / scripts/maintenance/ / scripts/analysis/ / scripts/filter/",
+        ".githooks/pre-commit 仓库化 + scripts/maintenance/install_git_hooks.sh",
+        "tests/test_pre_commit.py 验证拦截逻辑",
+        "首次 commit 触发拦截演示"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v1 pre-commit 钩子（6/1 ETF-Strategy-Refactor US-017 + commit 329d3ff）。教训：v1 重构后 decision.py import scripts.prefetch_data 失效（教训 67）。\n\n风险：误拦、漏拦。预计：2 小时。"
+    },
+    {
+      "id": "US-006",
+      "title": "继承 v1 ETF 池（14 只 CORE + 300 reference + 5 角色分类）",
+      "description": "As a v2 量化用户, I want ETF 池基于 v9-us002-pool-db-sot 14 只 CORE + 40 reference so that 池大小稳定、流动性筛选合规。",
+      "acceptanceCriteria": [
+        "etf_names 表初始化 14 只 CORE（510300/588000/512170/512880/512480/515790/512660/515050/512800/512400/512980/512200/515070/520900/515650 减去 510300 = 14 只）+ 40 只 reference",
+        "pool_role 默认值：unclassified（保守黑名单模式，规则 R19）",
+        "tradable 默认值：0（保守）",
+        "scripts/export_pool_to_txt.py 从 DB 导出 pool 文件",
+        "tests/unit/test_etf_pool.py 验证 14+40 = 54 只 + 角色分布",
+        "etf_pool.json（v1 旧文件）标记 .DEPRECATED 不再用"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v1 5/30 ETF 池 15 只 → 6/17 v9-us002-pool-db-sot 14 只（去 510300 大盘参考）+ schema 005 is_reference。教训：L19（标记角色不删数据）。\n\n风险：池变更影响回测一致性。预计：2 小时。"
+    },
+    {
+      "id": "US-007",
+      "title": "alpha 模块：v1 沉淀的'金三角'（max_hold=99999 + BOLL 中轨 + close>MA60）",
+      "description": "As a v2 策略开发者, I want alpha 模块实现 v1 C20 颠覆性发现的'入场过滤 + 永远满仓' so that alpha 真正来源不被遗忘（L225）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/alpha/strategy.py 实现 C21-1 策略（BOLL_strict_middle+MA60 入场）",
+        "src/etf_quant/alpha/config.py 配置 max_hold_days=99999（默认）",
+        "src/etf_quant/alpha/loader.py 加载 configs/c21_strategy.json（含 human_nature_warning 字段）",
+        "executor.py 实现 max_hold_days 持仓管理（v1 C11 修复）",
+        "tests/unit/test_alpha_strategy.py 验证入场/出场逻辑",
+        "tests/regression/test_c20_alpha_decomposition.py 6 场景剥离验证",
+        "configs/c21_strategy.json 包含 human_nature_warning 5 项心理挑战（L227）"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v1 C11/C18/C20/C21 实验（6/16）+ L216-L227 教训。教训：G（alpha 剥离验证）+ J（用户定性结构化）+ K（测试错/代码错）。\n\n风险：alpha 报告归因错误（v1 多次教训）。预计：4 小时。"
+    },
+    {
+      "id": "US-008",
+      "title": "execution 模块：TradeTracker（1483 行 → 拆为 3 文件）",
+      "description": "As a v2 开发者, I want TradeTracker 拆分清晰 so that 维护成本降低（v1 单文件 1483 行是技术债）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/execution/tracker.py（TradeTracker ~600 行）",
+        "src/etf_quant/execution/decision_snapshot.py（DecisionSnapshot ~300 行）",
+        "src/etf_quant/execution/validator.py（TradeValidator ~200 行）",
+        "src/etf_quant/execution/cost.py（交易成本 ~80 行）",
+        "TradeRecord 31 字段继承 v1（含 is_real / emotion / session / signal_* / target_price / stop_loss / model / strategy / evaluation / snapshot_ref）",
+        "tests/unit/test_execution_tracker.py 21 测试通过（继承 v1 test_us008）"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v1 src/trade/tracker.py 1483 行（拆分依据：v2-roadmap/notes/08_critical_modules.md 第 3.3 节）+ schema 004/006/007。教训：L117（半途改造）/ Q-009（决策上下文必填）。\n\n风险：拆分时接口签名不匹配。预计：4 小时。"
+    },
+    {
+      "id": "US-009",
+      "title": "risk 模块：PositionGuide 22 字段决策树 9 步",
+      "description": "As a v2 持仓用户, I want PositionGuide 对已有持仓给出明确指导 so that 我知道什么时候卖（L67：用户功能=补救措施）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/risk/position_guide.py 实现 22 字段 + 9 步决策树",
+        "9 步：legacy_holding > 止损 > 短期 > 止盈 > 到期 > 空仓 > 加仓 > 换仓 > 持有",
+        "DEFAULT_* 参数对齐 v8 POSITION_MANAGEMENT.md（不是 max_holdings=1，规则 4.1）",
+        "max_holdings=2（v8 沿用，与市场空仓联动）",
+        "tests/unit/test_position_guide.py 21 测试通过（继承 v1 test_us007）",
+        "tests/integration/test_position_guide_integration.py 端到端"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v1 US-007（6/3）+ src/analysis/position_guide.py 382 行。教训：L67（用户功能=补救措施）/ L69（擅自假设默认值错）。\n\n风险：参数对齐 v8 文档。预计：3 小时。"
+    },
+    {
+      "id": "US-010",
+      "title": "ComprehensiveValidator 4 验证器（WalkForward + MonteCarlo + CrossETF + 综合）",
+      "description": "As a v2 因子研究者, I want ComprehensiveValidator 检测过拟合 so that alpha 真实（v8_sop 4125 组合 0% 过拟合通过教训）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/backtest/validators/walk_forward.py min_windows=6",
+        "src/etf_quant/backtest/validators/cross_etf.py min_train_etfs=7, min_test_etfs=5",
+        "src/etf_quant/backtest/validators/monte_carlo.py p-value 显著性",
+        "src/etf_quant/backtest/validators/comprehensive.py pass_threshold=0.6, weights: wf=0.4 mc=0.15 ce=0.35 consistency=0.10",
+        "tests/unit/test_validators.py 18 测试通过（继承 v1）",
+        "5 折 WF 包装器（v9 IS-006 walk_forward_5fold.py）",
+        "auto_reflect.py 通过率 < 5% 自动触发反思（v9 IS-002）"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "依据：v1 ComprehensiveValidator 增强（6/1 18:00 commit）+ v9 Mission IS-002/IS-006。教训：G（alpha 剥离验证）+ v8_sop MC p-value=1.0 教训。\n\n风险：过拟合检测阈值过严/过松。预计：4 小时。"
+    },
+    {
+      "id": "US-011",
+      "title": "performance 模块：43 指标绩效评估",
+      "description": "As a v2 投资者, I want 完整的绩效指标 so that 评估策略真实表现（年化/夏普/最大回撤/胜率/盈亏比/IR/IC）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/performance/metrics.py 实现 43 指标（8 大类）",
+        "src/etf_quant/performance/report.py 绩效报告生成",
+        "tests/unit/test_metrics.py 覆盖 8 大类",
+        "对比 buy & hold 基准（alpha 真实值，L218）",
+        "样本外测试（防过拟合，L219）",
+        "数据时长校验（每只 ETF 实际数据范围，L220）"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "依据：v1 43 指标（v7 评价体系）+ 6/16 C12 buy&hold 基准。教训：D（alpha 验证 + 样本外）。\n\n风险：43 指标 vs 实际产出脱节（v1 教训）。预计：3 小时。"
+    },
+    {
+      "id": "US-012",
+      "title": "universe 模块：ETF 池动态加载（14 CORE + 40 reference + 池角色）",
+      "description": "As a v2 数据用户, I want ETF 池从 DB 动态加载 so that 池变更不需要改代码（v1 L62 监控阈值必须动态化）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/universe/loader.py 从 etf_names 表动态加载",
+        "支持 CORE / REFERENCE / LEGACY_HOLDING / EXCLUDED / UNCLASSIFIED 5 角色",
+        "ETFListLoader 接口（v1 已实现，继承）",
+        "scripts/filter_top500_etf.py 全市场筛选（5/30 流程）",
+        "tests/unit/test_universe_loader.py 验证动态加载"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "依据：v1 src/data/etf_pool_loader.py + ETFListLoader。教训：L62（阈值动态化）/ L19（标记角色不删除）。\n\n风险：池频繁变更影响回测。预计：2 小时。"
+    },
+    {
+      "id": "US-013",
+      "title": "alpha 模块：27 因子 + W4 RV 反转因子（v9 沉淀）",
+      "description": "As a v2 因子研究者, I want v9 沉淀的 27 因子 + W4 RV 反转因子 so that 不丢失 v1 因子研究成果。",
+      "acceptanceCriteria": [
+        "src/etf_quant/alpha/factors/ 实现 27 因子",
+        "src/etf_quant/alpha/factors/w4_rv.py 反转因子（v9 唯一稳健）",
+        "src/etf_quant/alpha/factors/b1_boll.py 布林上轨突破（IC=0.0484, IR=0.99）",
+        "src/etf_quant/alpha/factors/v1_volume.py 放量（IC=0.0369, IR=0.84）",
+        "src/etf_quant/alpha/factors/t1_macd.py MACD 红柱（IC=0.0423, IR=1.44）",
+        "src/etf_quant/alpha/factors/t3_sar.py SAR 趋势（IC=0.0252, IR=1.02）",
+        "src/etf_quant/alpha/factors/t4_adx.py ADX 趋势（IC=0.0248, IR=0.77）",
+        "src/etf_quant/alpha/factors/m2_momentum.py 5 日动量（IC=0.0186, IR=0.89）",
+        "IC/IR 计算器（analysis/batch_ic.py）",
+        "tests/unit/test_factors.py 每个因子单元测试"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "依据：v9 tag v9-us026-027（27 因子）+ v1 src/indicators/ 已有 8 类因子。教训：L218-L221（alpha 验证 + 样本外 + 数据时长）。\n\n风险：因子复用 + 避免未来函数（L71 已有审查）。预计：5 小时。"
+    },
+    {
+      "id": "US-014",
+      "title": "backtest 模块：复用 v1 src/backtest/engine.py",
+      "description": "As a v2 回测用户, I want 完整的回测引擎 so that 验证策略历史表现。",
+      "acceptanceCriteria": [
+        "src/etf_quant/backtest/engine.py 继承 v1 实现",
+        "src/etf_quant/backtest/legacy.py 归档 v1 旧实现",
+        "回测事件：开仓/平仓/止损/止盈/到期/调仓",
+        "实盘交易建模：T+1 / 滑点 / 手续费",
+        "tests/unit/test_backtest_engine.py 覆盖核心事件",
+        "tests/regression/test_backtest_regression.py 对比 v1 结果"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "依据：v1 src/backtest/engine.py + src/strategy/engine.py（重复，需整合）。教训：v1 src/backtest 与 src/strategy/engine.py 有重叠。\n\n风险：回测事件边界。预计：4 小时。"
+    },
+    {
+      "id": "US-015",
+      "title": "scheduler 模块：QwenPaw cron 配置（target-session 隔离）",
+      "description": "As a v2 用户, I want 定时任务不打断主对话 so that cron 推送走 WoXtGw== 隔离 session（L222 教训）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/scheduler/cron.py 封装 qwenpaw cron API",
+        "configs/cron_jobs.yaml（单一真相源，v1 6/16 已建立）",
+        "scripts/qwenpaw_cron_sync.py wrapper 脚本（--dry-run/--backup/--prune/--only）",
+        "所有 cron 默认 target-session=WoXtGw==",
+        "每日 14:30 daily 检查、09:30 新闻、16:30 SQLite 备份",
+        "tests/unit/test_cron_config.py 验证配置",
+        "tests/integration/test_cron_sync.py 验证同步脚本"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "依据：v1 configs/cron_jobs.yaml（6/16 L222 教训）+ scripts/qwenpaw_cron_sync.py。教训：L222（target-session 分流推送）。\n\n风险：cron delete+create（update 不存在）。预计：2 小时。"
+    },
+    {
+      "id": "US-016",
+      "title": "notify 模块：钉钉推送（双通道 notifier + scenario）",
+      "description": "As a v2 投资者, I want 钉钉推送买卖信号 + 警告 so that 实时获知决策。",
+      "acceptanceCriteria": [
+        "src/etf_quant/notify/dingtalk.py 钉钉客户端",
+        "src/etf_quant/notify/notifier.py 信号通知（含买卖+警告）",
+        "src/etf_quant/notify/scenario.py 场景通知（简化版）",
+        "src/etf_quant/notify/message.py 消息模板",
+        "src/etf_quant/notify/snapshot.py 决策快照",
+        "tests/unit/test_notify.py mock subprocess",
+        "tests/regression/test_dingtalk_push.py 集成"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "依据：v1 src/notify/ 4 文件。教训：L207（pytest mock 外部副作用，钉钉不应在测试中真推）。\n\n风险：钉钉 API 限流、模板变更。预计：3 小时。"
+    },
+    {
+      "id": "US-017",
+      "title": "config 模块：5 类配置 + 配置加载器",
+      "description": "As a v2 开发者, I want 配置外置 + 机制层校验 so that 改配置不需改代码（教训 L211）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/config/loader.py 统一配置加载",
+        "src/etf_quant/config/strategy.py 策略配置",
+        "src/etf_quant/config/risk.py 风控配置",
+        "src/etf_quant/config/data_sources.yaml 数据源配置",
+        "src/etf_quant/config/notify.yaml 通知配置",
+        "src/etf_quant/config/versions.py schema 版本管理",
+        "configs/c21_strategy.json 继承（含 human_nature_warning）",
+        "tests/unit/test_config_loader.py"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "依据：v1 config/ 5 个文件 + utils/config.py。教训：L211（机制层 > AI 自觉）。\n\n风险：配置默认值（保守 vs 宽松，规则 R19）。预计：3 小时。"
+    },
+    {
+      "id": "US-018",
+      "title": "monitor 模块：数据 + 系统 + 业务三层监控",
+      "description": "As a v2 运维, I want 主动监控数据 + 系统 + 业务 so that 沉默失败 7 天不再发生（L200 教训）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/monitor/data_health.py 数据新鲜度（分钟级 80min 阈值）",
+        "src/etf_quant/monitor/data_health.py 交易日完整性（min_day_count 动态化）",
+        "src/etf_quant/monitor/system.py 系统健康（CPU/内存/磁盘）",
+        "src/etf_quant/monitor/business.py 业务健康（持仓/收益/告警）",
+        "ALERT_ENABLED 环境变量 + COOLDOWN 1h",
+        "tests/unit/test_monitor.py 覆盖三层"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "依据：v1 src/data/monitor.py。教训：L62/L200/L222（动态化 + 沉默失败 + cooldown）。\n\n风险：告警风暴。预计：3 小时。"
+    },
+    {
+      "id": "US-019",
+      "title": "utils 模块：标准注释规范 + 隐私保护 + safety_gate",
+      "description": "As a v2 开发者, I want 所有 utils 模块有标准注释 + 隐私保护 so that 维护时不被坑（L118-L120 教训）。",
+      "acceptanceCriteria": [
+        "src/etf_quant/utils/db.py SQLite 封装",
+        "src/etf_quant/utils/http.py HTTP 封装（限流 + 重试）",
+        "src/etf_quant/utils/logger.py 日志",
+        "src/etf_quant/utils/safety_gate.py 写入前校验（机制层强制）",
+        "src/etf_quant/utils/audit_logger.py 审计日志",
+        "src/etf_quant/utils/execution_source.py --source 标识",
+        "所有文件头部 6 段标准注释：用途/被谁调用/功能说明/使用方式/依赖/注意事项",
+        "scripts/pre_commit_check.sh 隐私扫描",
+        "tests/unit/test_utils.py + test_pre_commit.py"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "依据：v1 utils/ 7 文件 + scripts/pre_commit_check.sh。教训：L101/L118-L120（执行源 + 文档一致性 + 隐私保护）。\n\n风险：标准注释工作量大。预计：3 小时。"
+    },
+    {
+      "id": "US-020",
+      "title": "etf-daily skill：ETF 每日决策入口（拆 etf-quant-decision）",
+      "description": "As a v2 量化用户, I want etf-daily skill 触发'ETF 决策'/'每日检查' so that 每日自动跑决策（v1 9 skill 重叠问题）。",
+      "acceptanceCriteria": [
+        "skills/etf-daily/SKILL.md（description + 触发词 + 使用方法）",
+        "skills/etf-daily/scripts/run_daily.py（CLI 入口，daily/eval 模式）",
+        "skills/etf-daily/scripts/run_simple.py（钉钉简版）",
+        "调用 src/etf_quant/alpha + portfolio + risk + execution + notify",
+        "SKILL.md 通过 skill-evaluator 评分 ≥ 8.0（v1 etf-quant-decision 6.5）",
+        "tests/e2e/test_skill_etf_daily.py 端到端测试",
+        "边界定义：etf-daily vs etf-research 明确"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 skills/etf-quant-decision/SKILL.md 138 行 + 评估报告（6/1 评分 6.5/10）。教训：v2 必须按场景切分（业务向 5 skill）。\n\n风险：与 etf-research 边界模糊。预计：4 小时。"
+    },
+    {
+      "id": "US-021",
+      "title": "etf-research skill：ETF 因子研究+回测验证+挖掘",
+      "description": "As a v2 因子研究者, I want etf-research skill 跑因子实验+回测+ComprehensiveValidator so that 验证新策略不过拟合。",
+      "acceptanceCriteria": [
+        "skills/etf-research/SKILL.md",
+        "skills/etf-research/scripts/run_mine.py 因子挖掘",
+        "skills/etf-research/scripts/run_validate.py ComprehensiveValidator 验证",
+        "skills/etf-research/scripts/run_wf.py WalkForward 验证",
+        "调用 src/etf_quant/alpha + backtest + performance",
+        "auto_reflect.py 集成（通过率 < 5% 触发反思，v9 IS-002）",
+        "tests/e2e/test_skill_etf_research.py"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 etf-quant-decision -m eval + 验证模块。教训：L218-L221（alpha 验证 + 样本外 + 数据时长）。\n\n风险：实验耗时（v8_sop 4125 组合教训）。预计：4 小时。"
+    },
+    {
+      "id": "US-022",
+      "title": "stock-analyze skill：单股确定性分析（基于 CSV）",
+      "description": "As a v2 个人投资者, I want 单股分析 so that 看具体某只股票（v1 股票分析 SKILL v3.0 已有）。",
+      "acceptanceCriteria": [
+        "skills/stock-analyze/SKILL.md",
+        "skills/stock-analyze/scripts/analyze.py（继承 v1 股票分析评分 -5~+5）",
+        "tests/e2e/test_skill_stock_analyze.py"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 skills/股票分析/SKILL.md 830 行（过大，需精简）。教训：L11/L13（复用现成）。\n\n风险：830 行 SKILL.md 精简。预计：2 小时。"
+    },
+    {
+      "id": "US-023",
+      "title": "stock-portfolio skill：组合回测+批量筛选",
+      "description": "As a v2 组合投资者, I want 多股组合回测 so that 验证自选股池表现（v1 投资组合回测 SKILL）。",
+      "acceptanceCriteria": [
+        "skills/stock-portfolio/SKILL.md",
+        "skills/stock-portfolio/scripts/portfolio_backtest.py（继承 v1 投资组合回测）",
+        "skills/stock-portfolio/scripts/screen.py（继承 v1 股票筛选）",
+        "tests/e2e/test_skill_stock_portfolio.py"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 投资组合回测 SKILL 206 行 + 股票筛选 SKILL 210 行。教训：v2 Skill 分拆（合并 v1 股票回测+筛选+组合到 stock-portfolio）。\n\n风险：合并时接口不一致。预计：3 小时。"
+    },
+    {
+      "id": "US-024",
+      "title": "quant-knowledge skill：量化知识库",
+      "description": "As a v2 学习者, I want 量化知识库 so that 学习经典策略（v1 quant-trading SKILL 74 行）。",
+      "acceptanceCriteria": [
+        "skills/quant-knowledge/SKILL.md",
+        "skills/quant-knowledge/data/concepts.md（金融基础）",
+        "skills/quant-knowledge/data/strategies.md（双均线/网格/突破）",
+        "skills/quant-knowledge/data/faq.md（常见问题）",
+        "tests/e2e/test_skill_quant_knowledge.py"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 quant-trading + 股票量化投资助教 合并。教训：v2 教育主线（Q1 拍板 C2 散户想学方）。\n\n风险：内容质量。预计：3 小时。"
+    },
+    {
+      "id": "US-025",
+      "title": "测试覆盖：unit + integration + e2e（51+ 测试基线）",
+      "description": "As a v2 架构师, I want 完整的测试金字塔 so that 重构安全（v1 51 测试基线）。",
+      "acceptanceCriteria": [
+        "tests/unit/ 每个模块 1 个测试文件（12+ 文件）",
+        "tests/integration/ 跨模块集成测试（5+ 文件）",
+        "tests/e2e/ 5 个 skill 端到端（5 文件）",
+        "tests/contracts/ 数据契约（4 文件，28 测试）",
+        "tests/regression/ 回归测试（5 文件）",
+        "总测试数 ≥ 200 通过",
+        "pytest.ini 配置覆盖率 ≥ 80%"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 51 测试 + 364 测试（6/4 收官）+ 6/16 C19/C20/C21 测试。教训：L19/L117（测试不能漏）。\n\n风险：测试覆盖不全。预计：8 小时。"
+    },
+    {
+      "id": "US-026",
+      "title": "文档体系：PRD + ARCHITECTURE + INTERFACE_CONTRACT + DATA_DICTIONARY",
+      "description": "As a v2 维护者, I want 完整文档体系 so that 1 人能维护（v1 docs/ 99 个混乱教训）。",
+      "acceptanceCriteria": [
+        "docs/PRD.md（产品需求）",
+        "docs/ARCHITECTURE.md（架构 12 模块 + 5 skill）",
+        "docs/INTERFACE_CONTRACT.md（模块接口契约 5 Schema + 5 Protocol）",
+        "docs/DATA_DICTIONARY.md（数据库表结构 7+1 表）",
+        "docs/CHANGELOG.md（变更日志）",
+        "docs/SOP_INDEX.md + 6 个 SOP（数据/重构/实验/数据源/备份/脱敏）",
+        "每个模块 README.md（v1 教训 L118-L119 文档一致性）",
+        "skill-evaluator 5 skill 评分 ≥ 8.0"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 docs/ 99 个混乱 → 5/31 清理到 4 SOP + 索引。教训：L118-L119（文档一致性 + 自评维度）。\n\n风险：文档维护成本。预计：6 小时。"
+    },
+    {
+      "id": "US-027",
+      "title": "SOP 沉淀：6 个 SOP（数据/重构/实验/数据源/备份/脱敏/任务）",
+      "description": "As a v2 开发者, I want SOP 流程 so that 任务执行有标准（v1 4 SOP + 业务新需求）。",
+      "acceptanceCriteria": [
+        "docs/SOP_01_DATA_MINING.md（数据挖掘 8 步，v1 已有）",
+        "docs/SOP_02_REFACTOR_DEV.md（重构 6 阶段，v1 已有）",
+        "docs/SOP_03_EXPERIMENT.md（实验 5 阶段，v1 已有）",
+        "docs/SOP_04_DATA_SOURCE.md（数据源接入验证，v1 已有）",
+        "docs/SOP_05_BACKUP.md（备份 SOP，v1 已建）",
+        "docs/SOP_06_REDACTION.md（脱敏 SOP，v1 已建）",
+        "docs/SOP_07_TASK.md（任务先问'为什么'，v2 新建，6/17 L229 教训）"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 docs/SOP_*.md 4 个 + 6/12 后新增 backup + redaction。教训：L229（任务前问'为什么'）。\n\n风险：SOP 文档长度。预计：3 小时。"
+    },
+    {
+      "id": "US-028",
+      "title": "教训沉淀：把 v1 96+ 教训映射到 v2 12 模块",
+      "description": "As a v2 维护者, I want 教训映射到模块 so that 未来开发者知道每个模块的'雷区'。",
+      "acceptanceCriteria": [
+        "memory/lessons/v2_module_mapping.md（12 模块 × 教训）",
+        "data_layer 模块关联 L22/L62/L112",
+        "alpha 模块关联 L218-L227",
+        "execution 模块关联 L67/L110/L111/L116",
+        "risk 模块关联 L67/L69",
+        "backtest 模块关联 L223-L227",
+        "config 模块关联 L211/L222",
+        "scheduler 模块关联 L222",
+        "utils 模块关联 L101/L118-L120",
+        "monitor 模块关联 L62/L200/L222",
+        "每个模块的 README.md 引用相关教训"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 memory/lessons/ 96+ 教训（5/31 拆分）。教训：L209/L228/L229（8 维度腐化自检）。\n\n风险：映射工作量大。预计：4 小时。"
+    },
+    {
+      "id": "US-029",
+      "title": "安全审计：safety_gate + audit_log + 执行源标识",
+      "description": "As a v2 架构师, I want 多层安全审计 so that 跨执行源不再串扰（L101 教训）。",
+      "acceptanceCriteria": [
+        "utils/safety_gate.py 写入前校验（业务规则 + 权限）",
+        "utils/audit_logger.py 审计日志（JSON 格式）",
+        "utils/execution_source.py --source=skill/cron/manual/cli 强制标识",
+        "所有 CLI 入口接收 --source 参数",
+        "所有 cron job 显式 --source=cron",
+        "所有 skill 调用显式 --source=skill",
+        "tests/unit/test_safety_gate.py + test_audit_log.py"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 utils/safety_gate.py + audit_logger.py（v1 已有，L101 教训后新增）。教训：L101（多执行源无标识）。\n\n风险：执行源漏标。预计：3 小时。"
+    },
+    {
+      "id": "US-030",
+      "title": "v2 第一版发布：tag v2.0-pre-us001 ~ v2.0-final",
+      "description": "As a v2 用户, I want 完整的 v2.0 release so that 从 v1 切换。",
+      "acceptanceCriteria": [
+        "所有 29 个 US 通过（passes=true）",
+        "git tag v2.0-pre-us001 ~ v2.0-final（30+ tag 链）",
+        "main 分支稳定可运行",
+        "GitHub release notes 完整",
+        "迁移指南（v1 → v2）文档",
+        "CHANGELOG.md 完整记录 v1→v2 变更",
+        "skill-evaluator 5 skill 评分 ≥ 8.0",
+        "≥ 200 测试通过 + pytest 覆盖率 ≥ 80%"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "依据：v1 v9 tag 链（v9-pre-us016 ~ v9-us026-027 7 tag）+ 6/4 364/364 测试通过标准。教训：v1 tag 命名规范（v9-usNNN-NNN）。\n\n风险：里程碑遗漏。预计：发布前 4 小时收尾。"
+    }
+  ],
+  "sprints": [
+    {
+      "id": "Sprint-1",
+      "name": "基础设施（P0）",
+      "duration": "约 1 周",
+      "userStories": ["US-001", "US-002", "US-003", "US-004", "US-005", "US-006"],
+      "milestone": "monorepo + 12 模块接口契约 + DB 迁移 + DataLayer + pre-commit + ETF 池",
+      "exitCriteria": "6/6 US 通过 + ≥ 80 测试 + 业务代码可调用 DataLayer"
+    },
+    {
+      "id": "Sprint-2",
+      "name": "核心业务（P0）",
+      "duration": "约 2 周",
+      "userStories": ["US-007", "US-008", "US-009", "US-010"],
+      "milestone": "alpha '金三角' + execution 拆分 + risk PositionGuide + ComprehensiveValidator",
+      "exitCriteria": "4/4 US 通过 + ≥ 150 测试 + C20 剥离验证可用"
+    },
+    {
+      "id": "Sprint-3",
+      "name": "12 模块完成（P1）",
+      "duration": "约 2 周",
+      "userStories": ["US-011", "US-012", "US-013", "US-014", "US-015", "US-016", "US-017", "US-018", "US-019"],
+      "milestone": "performance/universe/alpha 27 因子/backtest/scheduler/notify/config/monitor/utils",
+      "exitCriteria": "9/9 US 通过 + ≥ 180 测试 + 12 模块全部活跃"
+    },
+    {
+      "id": "Sprint-4",
+      "name": "5 Skill 入口（P2）",
+      "duration": "约 1 周",
+      "userStories": ["US-020", "US-021", "US-022", "US-023", "US-024"],
+      "milestone": "etf-daily / etf-research / stock-analyze / stock-portfolio / quant-knowledge",
+      "exitCriteria": "5/5 US 通过 + skill-evaluator ≥ 8.0 + 9 skill 重叠问题解决"
+    },
+    {
+      "id": "Sprint-5",
+      "name": "完善+发布（P2）",
+      "duration": "约 1 周",
+      "userStories": ["US-025", "US-026", "US-027", "US-028", "US-029", "US-030"],
+      "milestone": "测试金字塔 + 文档体系 + SOP 沉淀 + 教训映射 + 安全审计 + v2.0 release",
+      "exitCriteria": "6/6 US 通过 + ≥ 200 测试 + 30 tag + GitHub release"
+    }
+  ],
+  "metrics": {
+    "totalUS": 30,
+    "passedUS": 0,
+    "sprintCount": 5,
+    "estimatedHours": 100,
+    "estimatedDays": 35,
+    "testTarget": 200,
+    "skillEvaluatorTarget": 8.0,
+    "riskUS": [
+      "US-001（v2 架构骨架，错则全盘错）",
+      "US-007（alpha 金三角，错则 L225 教训失效）",
+      "US-010（ComprehensiveValidator，错则过拟合检测失效）",
+      "US-013（27 因子继承，错则 v9 沉淀失效）"
+    ]
+  }
+}
