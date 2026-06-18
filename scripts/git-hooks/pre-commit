@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""
+v2 Pre-commit 钩子（4 条拦截）
+
+按 v1 教训 + 规则 15（数据源统一）实施：
+
+1. 业务代码禁止 sqlite3.connect
+2. 业务代码禁止直接 import 旧 v1 模块（src.data.* / src.strategy.* 等）
+3. 所有 .py 必须有标准注释头（用途/被谁调用）
+4. 所有新增 .py 必须有对应测试文件
+
+豁免清单：
+- etf_quant/data_layer/ (数据层实现，允许 sqlite3)
+- etf_quant/utils/ (工具层)
+- etf_quant/monitor/ (监控)
+- tests/ (测试目录)
+
+按用户原话"防止跑偏"——pre-commit 是机制层第一道防线。
+按 L101 教训——多执行源必须标识。
+"""
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# 业务代码目录（不允许 sqlite3.connect / import 旧 v1）
+BUSINESS_DIRS = [
+    "src/etf_quant/universe",
+    "src/etf_quant/alpha",
+    "src/etf_quant/portfolio",
+    "src/etf_quant/risk",
+    "src/etf_quant/execution",
+    "src/etf_quant/backtest",
+    "src/etf_quant/performance",
+    "src/etf_quant/notify",
+    "src/etf_quant/config",
+    "src/etf_quant/scheduler",
+]
+
+# 豁免目录（数据层 + 工具 + 监控 + 测试）
+EXEMPT_DIRS = [
+    "src/etf_quant/data_layer",
+    "src/etf_quant/utils",
+    "src/etf_quant/monitor",
+    "tests",
+    "docs",
+    "scripts",
+    "schema",
+]
+
+# 旧 v1 模块路径（禁止 import）
+V1_FORBIDDEN_IMPORTS = [
+    r"from\s+src\.data\b",
+    r"from\s+src\.strategy\b",
+    r"from\s+src\.trade\b",
+    r"from\s+src\.analysis\b",
+    r"from\s+src\.risk\b",
+    r"from\s+src\.notify\b",
+    r"from\s+src\.cli\b",
+    r"import\s+src\.data\b",
+    r"import\s+src\.strategy\b",
+    r"import\s+src\.trade\b",
+]
+
+
+def get_staged_files() -> list[Path]:
+    """获取本次 commit 暂存的所有 .py 文件。"""
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=AM"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    files = []
+    for line in result.stdout.strip().split("\n"):
+        if line.endswith(".py") and line.startswith("src/"):
+            files.append(REPO_ROOT / line)
+    return files
+
+
+def is_exempt(path: Path) -> bool:
+    """检查文件是否在豁免目录。"""
+    rel = str(path.relative_to(REPO_ROOT))
+    return any(rel.startswith(d) for d in EXEMPT_DIRS)
+
+
+def check_sqlite3_in_business(staged_files: list[Path]) -> list[str]:
+    """检查 1: 业务代码禁止 sqlite3.connect。"""
+    errors = []
+    for path in staged_files:
+        if is_exempt(path):
+            continue
+        rel = str(path.relative_to(REPO_ROOT))
+        if not any(rel.startswith(d) for d in BUSINESS_DIRS):
+            continue
+        content = path.read_text(encoding="utf-8", errors="ignore")
+        if re.search(r"sqlite3\.connect|sqlite3\.Connection", content):
+            errors.append(
+                f"❌ [规则 15] {rel} 业务代码禁止 sqlite3.connect\n"
+                f"   请改用 etf_quant.data_layer.writer.DataWriter"
+            )
+    return errors
+
+
+def check_v1_forbidden_imports(staged_files: list[Path]) -> list[str]:
+    """检查 2: 业务代码禁止 import 旧 v1 模块。"""
+    errors = []
+    for path in staged_files:
+        if is_exempt(path):
+            continue
+        rel = str(path.relative_to(REPO_ROOT))
+        if not any(rel.startswith(d) for d in BUSINESS_DIRS):
+            continue
+        content = path.read_text(encoding="utf-8", errors="ignore")
+        for pattern in V1_FORBIDDEN_IMPORTS:
+            if re.search(pattern, content):
+                errors.append(
+                    f"❌ [v1 隔离] {rel} 禁止 import 旧 v1 模块\n"
+                    f"   匹配: {pattern}\n"
+                    f"   v2 仓不依赖 v1 仓（v1 = 考古资料）"
+                )
+                break
+    return errors
+
+
+def check_standard_header(staged_files: list[Path]) -> list[str]:
+    """检查 3: 所有 .py 必须有标准注释头（用途/被谁调用）。"""
+    errors = []
+    for path in staged_files:
+        if is_exempt(path):
+            continue
+        try:
+            content = path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        # 取前 30 行检查
+        head = "\n".join(content.split("\n")[:30])
+        if "用途" not in head and "被谁调用" not in head:
+            errors.append(
+                f"❌ [标准注释] {path.relative_to(REPO_ROOT)} 缺少'用途'或'被谁调用'注释\n"
+                f"   按 v1 教训 L118：Phase 完成后做文档一致性检查"
+            )
+    return errors
+
+
+def check_test_file_exists(staged_files: list[Path]) -> list[str]:
+    """检查 4: 所有新增 src/etf_quant/X/Y.py 必须有 tests/unit/test_X_Y.py。"""
+    errors = []
+    for path in staged_files:
+        if is_exempt(path):
+            continue
+        rel = str(path.relative_to(REPO_ROOT))
+        if not rel.startswith("src/etf_quant/"):
+            continue
+        # 解析路径 src/etf_quant/X/Y.py -> tests/unit/test_X_Y.py
+        parts = rel.split("/")
+        if len(parts) < 4:
+            continue
+        module = parts[2]
+        file_stem = parts[3][:-3]  # 去 .py
+        expected_test = REPO_ROOT / "tests" / "unit" / f"test_{module}_{file_stem}.py"
+        if not expected_test.exists():
+            errors.append(
+                f"⚠️ [测试缺失] {rel} 新增但缺少测试: {expected_test.relative_to(REPO_ROOT)}\n"
+                f"   （警告级，可 --no-verify 跳过）"
+            )
+    return errors
+
+
+def main() -> int:
+    staged = get_staged_files()
+    if not staged:
+        return 0
+
+    print(f"\n🔍 pre-commit 检查 {len(staged)} 个 .py 文件\n")
+
+    all_errors = []
+    all_errors.extend(check_sqlite3_in_business(staged))
+    all_errors.extend(check_v1_forbidden_imports(staged))
+    all_errors.extend(check_standard_header(staged))
+    all_errors.extend(check_test_file_exists(staged))
+
+    if all_errors:
+        print("=" * 70)
+        print(f"❌ pre-commit 拦截 {len(all_errors)} 个问题")
+        print("=" * 70)
+        for err in all_errors:
+            print(f"\n{err}")
+        print(f"\n{'=' * 70}")
+        print("💡 提示:")
+        print("  - sqlite3.connect 拦截是硬错误（规则 15 强制）")
+        print("  - 测试缺失是警告（git commit --no-verify 可跳过）")
+        print("  - 标准注释是硬错误（v1 教训 L118）")
+        print("  - 旧 v1 import 是硬错误（v1 = 考古资料）")
+        print("=" * 70)
+        # 区分硬错误和警告
+        hard_errors = [e for e in all_errors if "❌" in e]
+        if hard_errors:
+            print(f"\n🛑 {len(hard_errors)} 个硬错误，commit 拒绝。")
+            return 1
+        else:
+            print(f"\n⚠️ 只有警告，commit 允许（建议补测试）。")
+            return 0
+
+    print(f"✅ pre-commit 通过（{len(staged)} 个文件）")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
