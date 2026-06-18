@@ -1,0 +1,40 @@
+# v2 重构项目排除规则
+
+# 数据（运行时生成，不入 git）
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.log
+*.tmp
+*.bak
+
+# v1 引用（只读，不入 git）
+# etf_strategy/ 是 v1 旧仓参考
+
+# 备份
+.archive/

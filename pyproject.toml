@@ -1,0 +1,79 @@
+[project]
+name = "etf-quant-v2"
+version = "2.0.0a1"
+description = "ETF 量化投资策略 v2 - AI-Native 量化认知升级教育产品"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Moon Sea Wizard" }]
+
+dependencies = [
+    # 数据层
+    "akshare>=1.18.63",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    # 因子 / 回测
+    "scipy>=1.11",
+    "scikit-learn>=1.3",
+    # 数据库
+    "sqlalchemy>=2.0",
+    # 通知
+    "requests>=2.31",
+    # 配置
+    "pydantic>=2.5",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.12",
+    "ruff>=0.1",
+    "mypy>=1.7",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra -q --strict-markers --tb=short"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:akshare.*",
+    "ignore::DeprecationWarning:pandas.*",
+]
+
+[tool.coverage.run]
+source = ["src/etf_quant"]
+omit = ["tests/*", "*/__init__.py"]
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+skip_covered = false
+fail_under = 80
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
