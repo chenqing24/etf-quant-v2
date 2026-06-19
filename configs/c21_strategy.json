@@ -1,0 +1,76 @@
+{
+  "strategy_id": "C21-1",
+  "strategy_name": "BOLL_strict_middle+MA60 (无卖出)",
+  "version": "1.0",
+  "created_date": "2026-06-16",
+  "author": "福猫管家",
+  "experiment_source": "C21_entry_filter_grid + L226",
+  "expected_metrics": {
+    "alpha_5y": 0.5296,
+    "alpha_p_value": 0.0016,
+    "outperform_bh_pct": 0.9091,
+    "max_drawdown": 0.0156,
+    "win_rate": 0.4465,
+    "avg_trades_per_etf_per_5y": 4.7
+  },
+  "entry_conditions": {
+    "description": "买入时间前提条件 - 必须同时满足",
+    "all_required": true,
+    "conditions": [
+      {
+        "id": "boll_strict_middle",
+        "name": "BOLL 严格中轨",
+        "formula": "abs(close - BOLL_middle) / BOLL_middle <= 0.005",
+        "threshold": 0.005,
+        "rationale": "价格不太贵也不太便宜（20日均价 ±0.5%）"
+      },
+      {
+        "id": "ma60_trend_up",
+        "name": "MA60 趋势向上",
+        "formula": "close > MA60",
+        "threshold": null,
+        "rationale": "长期趋势向上（60日均线之上）"
+      }
+    ]
+  },
+  "exit_conditions": {
+    "description": "卖出规则 - C21-1 永远不卖",
+    "enabled": false,
+    "rationale": "A 股 ETF 长期持有最优，频繁卖出实际是负 alpha（L225 + C20 验证）"
+  },
+  "max_hold_days": 99999,
+  "human_nature_warning": {
+    "level": "high",
+    "description": "该策略非常考验人性 - 必须接受以下心理挑战",
+    "challenges": [
+      "单笔可能持有 5 年，期间浮亏 -20% 是正常的",
+      "胜率仅 44.7%，6 笔交易里接近 3 笔会亏损",
+      "5 年仅交易 4-5 次，期中可能完全错过某些行情",
+      "暴跌时（如 512690 BH -41%）必须不操作",
+      "周围人恐慌卖出时，必须坚持不动"
+    ],
+    "coping_strategies": [
+      "提前书面写下'无论涨跌都不操作'的承诺",
+      "关闭行情软件，只在每日 1 次检查时打开",
+      "把 C21-1 报告打印贴在屏幕旁提醒自己",
+      "预设资金为'5 年不动'的钱，不影响生活"
+    ]
+  },
+  "applicable_etf_pool": {
+    "type": "long_data_only",
+    "min_history_years": 5,
+    "etf_count_tested": 11,
+    "note": "仅在 5 年以上历史数据的 ETF 上验证，其他 ETF 效果未知"
+  },
+  "limitations": [
+    "样本量 11 < 30（业界标准不够）",
+    "未实盘验证（5 年实盘跟踪是唯一金标准）",
+    "12 组合网格搜索可能存在过拟合风险",
+    "BOLL_strict_middle 触发条件窄，可能错过 V 型暴涨"
+  ],
+  "next_steps": [
+    "样本外验证（7 训练 + 4 验证拆分）",
+    "5 年实盘跟踪验证",
+    "诚实修正所有报告已完成"
+  ]
+}
