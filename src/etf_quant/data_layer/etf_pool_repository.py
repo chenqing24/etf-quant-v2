@@ -46,6 +46,19 @@ PoolRole = Literal['core', 'reference', 'excluded']
 class ETFRepository:
     """ETF 元数据 + 池访问入口（单一数据源）"""
 
+    def is_tradable(self, code: str) -> bool:
+        """检查 code 是否在池中且可交易（v2 schema 003）。"""
+        try:
+            with self._conn() as conn:
+                cur = conn.execute(
+                    "SELECT 1 FROM etf_names WHERE code = ? AND tradable = 1",
+                    (code,),
+                )
+                return cur.fetchone() is not None
+        except Exception as e:
+            _logger.error(f"ETFRepository.is_tradable 失败: {e}")
+            return False
+
     DEFAULT_DB = 'etf_data_live/etf.db'
 
     def __init__(self, db_path: Optional[str] = None):
