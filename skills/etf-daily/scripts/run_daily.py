@@ -22,13 +22,16 @@ from etf_quant.data_layer.decision_snapshot_repo import (
     DecisionSnapshot, DecisionSnapshotRepository,
 )
 from etf_quant.risk.position_guide import PositionGuideAnalyzer
+from etf_quant.universe import ETFListLoader
+from etf_quant.monitor import DataHealthMonitor
 
 
 def run_daily(db_path: str) -> dict:
     """运行每日决策。
 
     Returns:
-        决策报告 dict（含 model_name, strategy_name, holdings, signals）
+        决策报告 dict（含 model_name, strategy_name, market_mode, decision,
+                       buy_candidates, sell_candidates, holdings, data_freshness, warnings）
     """
     # 1. 加载策略
     strategy = C21Strategy.from_config()
@@ -44,7 +47,32 @@ def run_daily(db_path: str) -> dict:
         current_prices={}, market_regime="range_bound",
     )
 
-    # 4. 决策快照
+    # 4. 数据健康检查
+    health = DataHealthMonitor().check()
+    data_freshness = f"距最新数据 {health.fresh_minutes:.0f} 分钟"
+    warnings = list(health.issues)
+
+    # 5. 加载 ETF 池
+    universe = ETFListLoader()
+    core_codes = [e.code for e in universe.get_core_pool()]
+
+    # 6. 决策（v2 简化：基于 holdings_count）
+    market_mode = "range_bound"  # TODO: 接入 market_mode 检测
+    if len(holdings_guide) == 0:
+        decision = "BUY"
+        buy_candidates = [{"code": c, "score": 0.5} for c in core_codes[:5]]
+        sell_candidates = []
+    elif len(holdings_guide) > 5:
+        decision = "SELL"
+        buy_candidates = []
+        sell_candidates = [{"code": h.code if hasattr(h, 'code') else str(h),
+                            "reason": "持仓超过 5 只"} for h in holdings_guide[:3]]
+    else:
+        decision = "HOLD"
+        buy_candidates = []
+        sell_candidates = []
+
+    # 7. 决策快照
     _now = __import__("datetime").datetime.now().isoformat(timespec="seconds")
     snapshot = DecisionSnapshot(
         snapshot_id=f"snap_{Path(db_path).stem}_{_now}",
@@ -53,14 +81,25 @@ def run_daily(db_path: str) -> dict:
         trigger="daily",
         model_name="v2_sop",
         strategy_name=strategy.__class__.__name__,
-        market_regime="range_bound",
+        market_regime=market_mode,
     )
     snapshot_repo.insert(snapshot)
 
     return {
         "model_name": "v2_sop",
         "strategy_name": strategy.__class__.__name__,
+        "timestamp": _now,
+        "market_mode": market_mode,
+        "decision": decision,
+        "buy_candidates": buy_candidates,
+        "sell_candidates": sell_candidates,
         "holdings_count": len(holdings_guide),
+        "holdings_detail": [
+            {"code": h.code if hasattr(h, 'code') else str(h)}
+            for h in holdings_guide
+        ],
+        "data_freshness": data_freshness,
+        "warnings": warnings,
         "snapshot_id": snapshot.snapshot_id,
     }
 
