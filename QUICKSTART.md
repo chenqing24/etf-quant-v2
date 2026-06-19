@@ -49,7 +49,7 @@ python skills/quant-knowledge/scripts/run_knowledge.py strategy
 
 ```bash
 # 8 步完整 demo
-python demo_full_flow.py
+python scripts/demo_full_flow.py
 ```
 
 ## 5. 8 维度腐化自检（1 分钟）

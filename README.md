@@ -41,7 +41,7 @@ etf_quant_v2/
 │   ├── ARCHITECTURE.md # 架构
 │   ├── INTERFACE_CONTRACT.md # 数据契约
 │   └── SOP_*.md       # 标准流程
-├── src/etf_quant/     # 12 模块
+├── src/etf_quant/     # 13 模块（含 2 个工具）
 │   ├── data_layer/    # 数据层（v1 继承）
 │   ├── universe/      # 股票池
 │   ├── alpha/         # 因子 / 信号
@@ -54,7 +54,7 @@ etf_quant_v2/
 │   ├── config/        # 配置
 │   ├── monitor/       # 监控
 │   ├── scheduler/     # 调度
-│   └── utils/         # 工具
+│   └── utils/         # 工具（含 execution_source）
 ├── skills/            # 5 skill 入口
 │   ├── etf-daily/
 │   ├── etf-research/
@@ -67,6 +67,8 @@ etf_quant_v2/
 ├── data/              # 运行时数据（gitignore）
 └── scripts/           # 工具脚本（含腐化自检）
 ```
+
+> **注**：`v2-roadmap/notes/01~12_*.md`（1710 行）等调研笔记在 workspace 根目录，不在 v2 仓内（避免仓过大）。详见 `docs/AUDIT_REPORT_20260620.md`。
 
 ## 执行规范
 
