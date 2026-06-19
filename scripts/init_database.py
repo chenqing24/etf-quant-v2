@@ -21,9 +21,12 @@ from etf_quant.config import constants  # noqa: E402
 def apply_migration(conn: sqlite3.Connection, sql_path: Path) -> bool:
     """应用单个 SQL 迁移文件。
 
-    容错策略：
+    容错策略（按 L236/L237 教训）：
     - CREATE TABLE 失败（如已存在）= 视为成功
     - ALTER TABLE ADD COLUMN 失败（重复列）= 视为成功（v1 增量迁移设计假设）
+    - ALTER TABLE DROP COLUMN 失败（no such column）= 视为成功（修复脚本重跑）
+    - ALTER TABLE RENAME COLUMN 失败（no such column 目标）= 视为成功（已重命名过）
+    - DROP INDEX 失败（no such index）= 视为成功
     - 其他失败 = 真正失败
     """
     print(f"  应用: {sql_path.name}")
@@ -36,8 +39,12 @@ def apply_migration(conn: sqlite3.Connection, sql_path: Path) -> bool:
                 conn.execute(stmt)
             except sqlite3.OperationalError as e:
                 err_msg = str(e).lower()
+                # 已存在/重复：跳过
                 if "already exists" in err_msg or "duplicate column" in err_msg:
-                    # CREATE TABLE IF NOT EXISTS / ALTER TABLE ADD COLUMN 已存在
+                    continue
+                # 列/索引不存在：跳过（修复脚本重跑场景）
+                if "no such column" in err_msg or "no such index" in err_msg:
+                    print(f"    [容错] {err_msg[:80]}")
                     continue
                 raise
         conn.commit()
