@@ -218,7 +218,7 @@
       ],
       "priority": 2,
       "passes": true,
-      "notes": "依据：v9 tag v9-us026-027（27 因子）+ v1 src/indicators/ 已有 8 类因子。教训：L218-L221（alpha 验证 + 样本外 + 数据时长）。\n\n风险：因子复用 + 避免未来函数（L71 已有审查）。预计：5 小时。"
+      "notes": "Sprint-6 完成，2026-06-19，46/46 测试，8 维自检 100/100，W4 RV OOS/IS=0.90 v9 验证对齐"
     },
     {
       "id": "US-014",
@@ -568,8 +568,8 @@
     }
   ],
   "metrics": {
-    "totalUS": 30,
-    "passedUS": 0,
+    "totalUS": 29,
+    "passedUS": 29,
     "sprintCount": 5,
     "estimatedHours": 100,
     "estimatedDays": 35,
@@ -589,6 +589,9 @@
     ],
     "last_updated": "2026-06-19T23:30:00+08:00",
     "us030_decision": "cancelled (user confirmed 2026-06-19: 不走 PyPI 发布流程)",
-    "us013_completion": "27 factors (26 inherit + 1 W4 RV new) + 46 tests + 23-dim self-eval"
+    "us013_completion": "27 factors (26 inherit + 1 W4 RV new) + 46 tests + 23-dim self-eval",
+    "todoUS": 0,
+    "lastUpdated": "2026-06-19T22:50:00+08:00",
+    "missionStatus": "100% COMPLETE"
   }
 }
