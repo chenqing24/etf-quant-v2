@@ -48,7 +48,9 @@ def apply_migration(conn: sqlite3.Connection, sql_path: Path) -> bool:
 
 
 def main() -> int:
-    db_path = constants.DB_PATH
+    # 支持环境变量覆盖（用于测试）
+    import os
+    db_path = os.environ.get("ETF_QUANT_DB_PATH", constants.DB_PATH)
     print(f"📦 初始化 v2 数据库: {db_path}")
     print(f"📁 Schema 目录: {_SCHEMA_DIR}")
     print(f"📐 WAL 模式: {constants.WAL_MODE_ENABLED}")
