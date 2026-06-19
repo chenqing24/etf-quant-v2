@@ -182,8 +182,8 @@
         "数据时长校验（每只 ETF 实际数据范围，L220）"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "依据：v1 43 指标（v7 评价体系）+ 6/16 C12 buy&hold 基准。教训：D（alpha 验证 + 样本外）。\n\n风险：43 指标 vs 实际产出脱节（v1 教训）。预计：3 小时。"
+      "passes": false,
+      "notes": "依据：v1 43 指标（v7 评价体系）+ 6/16 C12 buy&hold 基准。教训：D（alpha 验证 + 样本外）。\n\n风险：43 指标 vs 实际产出脱节（v1 教训）。预计：3 小时。 [诚实声明 2026-06-19: 仅 README+__init__.py 无业务逻辑，Sprint-7 实施]"
     },
     {
       "id": "US-012",
@@ -197,8 +197,8 @@
         "tests/unit/test_universe_loader.py 验证动态加载"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "依据：v1 src/data/etf_pool_loader.py + ETFListLoader。教训：L62（阈值动态化）/ L19（标记角色不删除）。\n\n风险：池频繁变更影响回测。预计：2 小时。"
+      "passes": false,
+      "notes": "依据：v1 src/data/etf_pool_loader.py + ETFListLoader。教训：L62（阈值动态化）/ L19（标记角色不删除）。\n\n风险：池频繁变更影响回测。预计：2 小时。 [诚实声明 2026-06-19: 仅 README+__init__.py 无业务逻辑，Sprint-7 实施]"
     },
     {
       "id": "US-013",
@@ -250,8 +250,8 @@
         "tests/integration/test_cron_sync.py 验证同步脚本"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "依据：v1 configs/cron_jobs.yaml（6/16 L222 教训）+ scripts/qwenpaw_cron_sync.py。教训：L222（target-session 分流推送）。\n\n风险：cron delete+create（update 不存在）。预计：2 小时。"
+      "passes": false,
+      "notes": "依据：v1 configs/cron_jobs.yaml（6/16 L222 教训）+ scripts/qwenpaw_cron_sync.py。教训：L222（target-session 分流推送）。\n\n风险：cron delete+create（update 不存在）。预计：2 小时。 [诚实声明 2026-06-19: 仅 README+__init__.py 无业务逻辑，Sprint-7 实施]"
     },
     {
       "id": "US-016",
@@ -267,8 +267,8 @@
         "tests/regression/test_dingtalk_push.py 集成"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "依据：v1 src/notify/ 4 文件。教训：L207（pytest mock 外部副作用，钉钉不应在测试中真推）。\n\n风险：钉钉 API 限流、模板变更。预计：3 小时。"
+      "passes": false,
+      "notes": "依据：v1 src/notify/ 4 文件。教训：L207（pytest mock 外部副作用，钉钉不应在测试中真推）。\n\n风险：钉钉 API 限流、模板变更。预计：3 小时。 [诚实声明 2026-06-19: 仅 README+__init__.py 无业务逻辑，Sprint-7 实施]"
     },
     {
       "id": "US-017",
@@ -301,8 +301,8 @@
         "tests/unit/test_monitor.py 覆盖三层"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "依据：v1 src/data/monitor.py。教训：L62/L200/L222（动态化 + 沉默失败 + cooldown）。\n\n风险：告警风暴。预计：3 小时。"
+      "passes": false,
+      "notes": "依据：v1 src/data/monitor.py。教训：L62/L200/L222（动态化 + 沉默失败 + cooldown）。\n\n风险：告警风暴。预计：3 小时。 [诚实声明 2026-06-19: 仅 README+__init__.py 无业务逻辑，Sprint-7 实施]"
     },
     {
       "id": "US-019",
@@ -569,7 +569,7 @@
   ],
   "metrics": {
     "totalUS": 29,
-    "passedUS": 29,
+    "passedUS": 24,
     "sprintCount": 5,
     "estimatedHours": 100,
     "estimatedDays": 35,
@@ -590,8 +590,8 @@
     "last_updated": "2026-06-19T23:30:00+08:00",
     "us030_decision": "cancelled (user confirmed 2026-06-19: 不走 PyPI 发布流程)",
     "us013_completion": "27 factors (26 inherit + 1 W4 RV new) + 46 tests + 23-dim self-eval",
-    "todoUS": 0,
-    "lastUpdated": "2026-06-19T22:50:00+08:00",
-    "missionStatus": "100% COMPLETE"
+    "todoUS": 5,
+    "lastUpdated": "2026-06-19T22:55:00+08:00",
+    "missionStatus": "P0/P1 完成，业务实现 82%"
   }
 }

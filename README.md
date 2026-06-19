@@ -5,7 +5,19 @@
 
 ## 状态
 
-🚧 **v2.0 重构中** —— Sprint-0（基础设施）启动
+✅ **v2.0 已发布 v2.0-final** —— Sprint-0~6 完成，Mission 接近 100%
+
+| 维度 | 数值 |
+|------|-----:|
+| Sprint | 0/1/2/3/4/5/6 全完成 |
+| US（接口契约）| 29/29 = 100% |
+| US（业务实现）| 24/29 = 83% |
+| 测试 | 222/222 全过 |
+| 8 维自检 | 100/100 |
+| Tag | `v2.0-final` + `sprint-6-complete` |
+| 下一步 | Sprint-7 业务完整化（5 空壳模块实现 + 8 核心文档）|
+
+> **诚实声明**：5 个模块（monitor/notify/performance/scheduler/universe）目前只有 README + __init__.py，业务逻辑在 Sprint-7 实现。详见 `docs/NEW_USER_FEEDBACK_REPORT.md`。
 
 ## 核心定位
 
