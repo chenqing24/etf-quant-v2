@@ -17,7 +17,7 @@
         "git commit 含完整骨架"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v2-roadmap/00_evolution_review.md 第 7.1 节（12 模块）+ v2-roadmap/00_background.md 第 5 节（不污染原则）。业界参考：QuantConnect LEAN（19.8k star）+ Zipline（19.9k star）单仓布局 ✅ Verified。\n\n风险：src/ 根目录散落文件（v1 技术债）。预计：1 小时。"
     },
     {
@@ -34,7 +34,7 @@
         "总测试数 ≥ 28 通过"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 contracts.py 380 行 5 Schema + 5 Protocol（5/29 数据契约化成果）+ v2-roadmap/notes/09_data_layer.md 第 3.2 节。业界参考：MiFID II / QuantConnect Lean / CQRS Event Sourcing ✅ Verified。\n\n风险：契约变更需 CHANGELOG 记录 + major 版本升级。预计：2 小时。"
     },
     {
@@ -51,7 +51,7 @@
         "迁移脚本可重跑（幂等性：CREATE IF NOT EXISTS）"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 schema/migrations/ 7 个文件 + v2-roadmap/notes/09_data_layer.md 第 3.1-3.5 节。教训：DB_PATH 必须绝对路径（教训 L112）。\n\n风险：迁移顺序、字段冲突、index 重建。预计：2 小时。"
     },
     {
@@ -69,7 +69,7 @@
         "tests/integration/test_data_integration.py 7 测试通过"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 src/data/writer.py 361 行 + loader.py 304 行 + monitor.py。教训：L22/L62/L112（监控阈值动态化 + DB_PATH 绝对路径）。\n\n风险：WAL 模式与并发、迁移冲突。预计：3 小时。"
     },
     {
@@ -84,7 +84,7 @@
         "首次 commit 触发拦截演示"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 pre-commit 钩子（6/1 ETF-Strategy-Refactor US-017 + commit 329d3ff）。教训：v1 重构后 decision.py import scripts.prefetch_data 失效（教训 67）。\n\n风险：误拦、漏拦。预计：2 小时。"
     },
     {
@@ -100,7 +100,7 @@
         "etf_pool.json（v1 旧文件）标记 .DEPRECATED 不再用"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 5/30 ETF 池 15 只 → 6/17 v9-us002-pool-db-sot 14 只（去 510300 大盘参考）+ schema 005 is_reference。教训：L19（标记角色不删数据）。\n\n风险：池变更影响回测一致性。预计：2 小时。"
     },
     {
@@ -117,7 +117,7 @@
         "configs/c21_strategy.json 包含 human_nature_warning 5 项心理挑战（L227）"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 C11/C18/C20/C21 实验（6/16）+ L216-L227 教训。教训：G（alpha 剥离验证）+ J（用户定性结构化）+ K（测试错/代码错）。\n\n风险：alpha 报告归因错误（v1 多次教训）。预计：4 小时。"
     },
     {
@@ -133,7 +133,7 @@
         "tests/unit/test_execution_tracker.py 21 测试通过（继承 v1 test_us008）"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 src/trade/tracker.py 1483 行（拆分依据：v2-roadmap/notes/08_critical_modules.md 第 3.3 节）+ schema 004/006/007。教训：L117（半途改造）/ Q-009（决策上下文必填）。\n\n风险：拆分时接口签名不匹配。预计：4 小时。"
     },
     {
@@ -149,7 +149,7 @@
         "tests/integration/test_position_guide_integration.py 端到端"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 US-007（6/3）+ src/analysis/position_guide.py 382 行。教训：L67（用户功能=补救措施）/ L69（擅自假设默认值错）。\n\n风险：参数对齐 v8 文档。预计：3 小时。"
     },
     {
@@ -166,7 +166,7 @@
         "auto_reflect.py 通过率 < 5% 自动触发反思（v9 IS-002）"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 ComprehensiveValidator 增强（6/1 18:00 commit）+ v9 Mission IS-002/IS-006。教训：G（alpha 剥离验证）+ v8_sop MC p-value=1.0 教训。\n\n风险：过拟合检测阈值过严/过松。预计：4 小时。"
     },
     {
@@ -182,7 +182,7 @@
         "数据时长校验（每只 ETF 实际数据范围，L220）"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 43 指标（v7 评价体系）+ 6/16 C12 buy&hold 基准。教训：D（alpha 验证 + 样本外）。\n\n风险：43 指标 vs 实际产出脱节（v1 教训）。预计：3 小时。"
     },
     {
@@ -197,7 +197,7 @@
         "tests/unit/test_universe_loader.py 验证动态加载"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 src/data/etf_pool_loader.py + ETFListLoader。教训：L62（阈值动态化）/ L19（标记角色不删除）。\n\n风险：池频繁变更影响回测。预计：2 小时。"
     },
     {
@@ -217,7 +217,7 @@
         "tests/unit/test_factors.py 每个因子单元测试"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v9 tag v9-us026-027（27 因子）+ v1 src/indicators/ 已有 8 类因子。教训：L218-L221（alpha 验证 + 样本外 + 数据时长）。\n\n风险：因子复用 + 避免未来函数（L71 已有审查）。预计：5 小时。"
     },
     {
@@ -233,7 +233,7 @@
         "tests/regression/test_backtest_regression.py 对比 v1 结果"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 src/backtest/engine.py + src/strategy/engine.py（重复，需整合）。教训：v1 src/backtest 与 src/strategy/engine.py 有重叠。\n\n风险：回测事件边界。预计：4 小时。"
     },
     {
@@ -250,7 +250,7 @@
         "tests/integration/test_cron_sync.py 验证同步脚本"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 configs/cron_jobs.yaml（6/16 L222 教训）+ scripts/qwenpaw_cron_sync.py。教训：L222（target-session 分流推送）。\n\n风险：cron delete+create（update 不存在）。预计：2 小时。"
     },
     {
@@ -267,7 +267,7 @@
         "tests/regression/test_dingtalk_push.py 集成"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 src/notify/ 4 文件。教训：L207（pytest mock 外部副作用，钉钉不应在测试中真推）。\n\n风险：钉钉 API 限流、模板变更。预计：3 小时。"
     },
     {
@@ -285,7 +285,7 @@
         "tests/unit/test_config_loader.py"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 config/ 5 个文件 + utils/config.py。教训：L211（机制层 > AI 自觉）。\n\n风险：配置默认值（保守 vs 宽松，规则 R19）。预计：3 小时。"
     },
     {
@@ -301,7 +301,7 @@
         "tests/unit/test_monitor.py 覆盖三层"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 src/data/monitor.py。教训：L62/L200/L222（动态化 + 沉默失败 + cooldown）。\n\n风险：告警风暴。预计：3 小时。"
     },
     {
@@ -320,7 +320,7 @@
         "tests/unit/test_utils.py + test_pre_commit.py"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 utils/ 7 文件 + scripts/pre_commit_check.sh。教训：L101/L118-L120（执行源 + 文档一致性 + 隐私保护）。\n\n风险：标准注释工作量大。预计：3 小时。"
     },
     {
@@ -337,7 +337,7 @@
         "边界定义：etf-daily vs etf-research 明确"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 skills/etf-quant-decision/SKILL.md 138 行 + 评估报告（6/1 评分 6.5/10）。教训：v2 必须按场景切分（业务向 5 skill）。\n\n风险：与 etf-research 边界模糊。预计：4 小时。"
     },
     {
@@ -354,7 +354,7 @@
         "tests/e2e/test_skill_etf_research.py"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 etf-quant-decision -m eval + 验证模块。教训：L218-L221（alpha 验证 + 样本外 + 数据时长）。\n\n风险：实验耗时（v8_sop 4125 组合教训）。预计：4 小时。"
     },
     {
@@ -367,7 +367,7 @@
         "tests/e2e/test_skill_stock_analyze.py"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 skills/股票分析/SKILL.md 830 行（过大，需精简）。教训：L11/L13（复用现成）。\n\n风险：830 行 SKILL.md 精简。预计：2 小时。"
     },
     {
@@ -381,7 +381,7 @@
         "tests/e2e/test_skill_stock_portfolio.py"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 投资组合回测 SKILL 206 行 + 股票筛选 SKILL 210 行。教训：v2 Skill 分拆（合并 v1 股票回测+筛选+组合到 stock-portfolio）。\n\n风险：合并时接口不一致。预计：3 小时。"
     },
     {
@@ -396,7 +396,7 @@
         "tests/e2e/test_skill_quant_knowledge.py"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 quant-trading + 股票量化投资助教 合并。教训：v2 教育主线（Q1 拍板 C2 散户想学方）。\n\n风险：内容质量。预计：3 小时。"
     },
     {
@@ -413,7 +413,7 @@
         "pytest.ini 配置覆盖率 ≥ 80%"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 51 测试 + 364 测试（6/4 收官）+ 6/16 C19/C20/C21 测试。教训：L19/L117（测试不能漏）。\n\n风险：测试覆盖不全。预计：8 小时。"
     },
     {
@@ -431,7 +431,7 @@
         "skill-evaluator 5 skill 评分 ≥ 8.0"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 docs/ 99 个混乱 → 5/31 清理到 4 SOP + 索引。教训：L118-L119（文档一致性 + 自评维度）。\n\n风险：文档维护成本。预计：6 小时。"
     },
     {
@@ -448,7 +448,7 @@
         "docs/SOP_07_TASK.md（任务先问'为什么'，v2 新建，6/17 L229 教训）"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 docs/SOP_*.md 4 个 + 6/12 后新增 backup + redaction。教训：L229（任务前问'为什么'）。\n\n风险：SOP 文档长度。预计：3 小时。"
     },
     {
@@ -469,7 +469,7 @@
         "每个模块的 README.md 引用相关教训"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 memory/lessons/ 96+ 教训（5/31 拆分）。教训：L209/L228/L229（8 维度腐化自检）。\n\n风险：映射工作量大。预计：4 小时。"
     },
     {
@@ -486,26 +486,8 @@
         "tests/unit/test_safety_gate.py + test_audit_log.py"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "依据：v1 utils/safety_gate.py + audit_logger.py（v1 已有，L101 教训后新增）。教训：L101（多执行源无标识）。\n\n风险：执行源漏标。预计：3 小时。"
-    },
-    {
-      "id": "US-030",
-      "title": "v2 第一版发布：tag v2.0-pre-us001 ~ v2.0-final",
-      "description": "As a v2 用户, I want 完整的 v2.0 release so that 从 v1 切换。",
-      "acceptanceCriteria": [
-        "所有 29 个 US 通过（passes=true）",
-        "git tag v2.0-pre-us001 ~ v2.0-final（30+ tag 链）",
-        "main 分支稳定可运行",
-        "GitHub release notes 完整",
-        "迁移指南（v1 → v2）文档",
-        "CHANGELOG.md 完整记录 v1→v2 变更",
-        "skill-evaluator 5 skill 评分 ≥ 8.0",
-        "≥ 200 测试通过 + pytest 覆盖率 ≥ 80%"
-      ],
-      "priority": 3,
-      "passes": false,
-      "notes": "依据：v1 v9 tag 链（v9-pre-us016 ~ v9-us026-027 7 tag）+ 6/4 364/364 测试通过标准。教训：v1 tag 命名规范（v9-usNNN-NNN）。\n\n风险：里程碑遗漏。预计：发布前 4 小时收尾。"
     }
   ],
   "sprints": [
@@ -513,7 +495,14 @@
       "id": "Sprint-1",
       "name": "基础设施（P0）",
       "duration": "约 1 周",
-      "userStories": ["US-001", "US-002", "US-003", "US-004", "US-005", "US-006"],
+      "userStories": [
+        "US-001",
+        "US-002",
+        "US-003",
+        "US-004",
+        "US-005",
+        "US-006"
+      ],
       "milestone": "monorepo + 12 模块接口契约 + DB 迁移 + DataLayer + pre-commit + ETF 池",
       "exitCriteria": "6/6 US 通过 + ≥ 80 测试 + 业务代码可调用 DataLayer"
     },
@@ -521,7 +510,12 @@
       "id": "Sprint-2",
       "name": "核心业务（P0）",
       "duration": "约 2 周",
-      "userStories": ["US-007", "US-008", "US-009", "US-010"],
+      "userStories": [
+        "US-007",
+        "US-008",
+        "US-009",
+        "US-010"
+      ],
       "milestone": "alpha '金三角' + execution 拆分 + risk PositionGuide + ComprehensiveValidator",
       "exitCriteria": "4/4 US 通过 + ≥ 150 测试 + C20 剥离验证可用"
     },
@@ -529,7 +523,17 @@
       "id": "Sprint-3",
       "name": "12 模块完成（P1）",
       "duration": "约 2 周",
-      "userStories": ["US-011", "US-012", "US-013", "US-014", "US-015", "US-016", "US-017", "US-018", "US-019"],
+      "userStories": [
+        "US-011",
+        "US-012",
+        "US-013",
+        "US-014",
+        "US-015",
+        "US-016",
+        "US-017",
+        "US-018",
+        "US-019"
+      ],
       "milestone": "performance/universe/alpha 27 因子/backtest/scheduler/notify/config/monitor/utils",
       "exitCriteria": "9/9 US 通过 + ≥ 180 测试 + 12 模块全部活跃"
     },
@@ -537,7 +541,13 @@
       "id": "Sprint-4",
       "name": "5 Skill 入口（P2）",
       "duration": "约 1 周",
-      "userStories": ["US-020", "US-021", "US-022", "US-023", "US-024"],
+      "userStories": [
+        "US-020",
+        "US-021",
+        "US-022",
+        "US-023",
+        "US-024"
+      ],
       "milestone": "etf-daily / etf-research / stock-analyze / stock-portfolio / quant-knowledge",
       "exitCriteria": "5/5 US 通过 + skill-evaluator ≥ 8.0 + 9 skill 重叠问题解决"
     },
@@ -545,7 +555,14 @@
       "id": "Sprint-5",
       "name": "完善+发布（P2）",
       "duration": "约 1 周",
-      "userStories": ["US-025", "US-026", "US-027", "US-028", "US-029", "US-030"],
+      "userStories": [
+        "US-025",
+        "US-026",
+        "US-027",
+        "US-028",
+        "US-029",
+        "US-030"
+      ],
       "milestone": "测试金字塔 + 文档体系 + SOP 沉淀 + 教训映射 + 安全审计 + v2.0 release",
       "exitCriteria": "6/6 US 通过 + ≥ 200 测试 + 30 tag + GitHub release"
     }
@@ -563,6 +580,15 @@
       "US-007（alpha 金三角，错则 L225 教训失效）",
       "US-010（ComprehensiveValidator，错则过拟合检测失效）",
       "US-013（27 因子继承，错则 v9 沉淀失效）"
-    ]
+    ],
+    "total_us": 29,
+    "done_us": 29,
+    "todo_us": 0,
+    "todo_list": [
+      "US-013"
+    ],
+    "last_updated": "2026-06-19T23:30:00+08:00",
+    "us030_decision": "cancelled (user confirmed 2026-06-19: 不走 PyPI 发布流程)",
+    "us013_completion": "27 factors (26 inherit + 1 W4 RV new) + 46 tests + 23-dim self-eval"
   }
 }
