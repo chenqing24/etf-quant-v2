@@ -11,7 +11,7 @@ from typing import Optional
 
 @dataclass
 class DecisionSnapshot:
-    """决策快照 dataclass（schema 007 14 字段）。"""
+    """决策快照 dataclass（v1 真实 19 列，按 009 迁移补齐）。"""
 
     snapshot_id: str
     snapshot_time: str
@@ -27,10 +27,16 @@ class DecisionSnapshot:
     market_regime: Optional[str] = None
     reasoning: Optional[str] = None
     created_at: Optional[str] = None
+    # 009 迁移补齐的 5 列
+    target_price: float = 0.0
+    stop_loss_price: float = 0.0
+    stop_profit_price: float = 0.0
+    risk_reward_ratio: float = 0.0
+    expected_hold_days: int = 0
 
 
 class DecisionSnapshotRepository:
-    """decision_snapshot 表 Repository。"""
+    """decision_snapshot 表 Repository（v1 真实 19 列）。"""
 
     def __init__(self, db_path: str) -> None:
         self.db_path = db_path
@@ -48,14 +54,17 @@ class DecisionSnapshotRepository:
                 "INSERT OR REPLACE INTO decision_snapshot ("
                 "snapshot_id, snapshot_time, trigger, model_name, model_version,"
                 " strategy_name, config_json, evaluation_json, factor_breakdown_json,"
-                " today_top_10_json, backtest_last_10_json, market_regime, reasoning, created_at"
-                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " today_top_10_json, backtest_last_10_json, market_regime, reasoning, created_at,"
+                " target_price, stop_loss_price, stop_profit_price, risk_reward_ratio, expected_hold_days"
+                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     snap.snapshot_id, snap.snapshot_time, snap.trigger,
                     snap.model_name, snap.model_version, snap.strategy_name,
                     snap.config_json, snap.evaluation_json, snap.factor_breakdown_json,
                     snap.today_top_10_json, snap.backtest_last_10_json,
                     snap.market_regime, snap.reasoning, snap.created_at,
+                    snap.target_price, snap.stop_loss_price, snap.stop_profit_price,
+                    snap.risk_reward_ratio, snap.expected_hold_days,
                 ),
             )
             conn.commit()
@@ -81,6 +90,9 @@ class DecisionSnapshotRepository:
             factor_breakdown_json=row[8], today_top_10_json=row[9],
             backtest_last_10_json=row[10], market_regime=row[11],
             reasoning=row[12], created_at=row[13],
+            target_price=row[14] or 0.0, stop_loss_price=row[15] or 0.0,
+            stop_profit_price=row[16] or 0.0, risk_reward_ratio=row[17] or 0.0,
+            expected_hold_days=row[18] or 0,
         )
 
     def list_recent(self, limit: int = 10) -> list:

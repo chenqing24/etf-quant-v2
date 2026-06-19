@@ -40,7 +40,7 @@ from typing import List, Optional
 
 @dataclass
 class TradeRecord:
-    """交易记录 dataclass（v1 31 字段 + 兼容）。"""
+    """交易记录 dataclass（v1 真实 37 列，按 V1_VS_V2_SCHEMA_AUDIT 调研）。"""
 
     date: str
     code: str
@@ -87,19 +87,35 @@ class TradeRecord:
     evaluation: Optional[str] = None
     snapshot_ref: Optional[str] = None
 
+    # 008 迁移补齐的 5 列（v1 业务库 37 列）
+    target_price: float = 0.0
+    stop_loss_price: float = 0.0
+    stop_profit_price: float = 0.0
+    risk_reward_ratio: float = 0.0
+    max_hold_days: int = 99999
+
 
 class TradeHistoryRepository:
-    """trade_history 表 Repository（Fowler Repository 模式）。"""
+    """trade_history 表 Repository（Fowler Repository 模式 + v1 真实 37 列）。"""
 
-    # v1 真实 31 列（按 schema 004）
+    # v1 真实 37 列（按 V1_VS_V2_SCHEMA_AUDIT + 008 迁移补齐）
     COLUMNS = [
+        # 基础 8 列
         "date", "code", "name", "action", "price", "quantity", "amount", "reason",
-        "expected_return", "actual_pnl", "note",
+        # 业绩 4 列
+        "expected_return", "actual_pnl", "note", "trade_time",
+        # 实时快照 5 列
         "realtime_price", "price_deviation", "rsi_14", "day_change_pct", "score",
+        # 信号快照 5 列
         "signal_time", "signal_price", "signal_rsi", "signal_adx", "signal_score",
-        "trade_time", "emotion", "session",
+        # 情绪/时段 2 列
+        "emotion", "session",
+        # 标记 2 列
         "is_real", "is_paper",
+        # Q-009 决策上下文 4 列
         "model", "strategy", "evaluation", "snapshot_ref",
+        # 008 迁移补齐 5 列
+        "target_price", "stop_loss_price", "stop_profit_price", "risk_reward_ratio", "max_hold_days",
     ]
 
     def __init__(self, db_path: str) -> None:
@@ -181,14 +197,17 @@ class TradeHistoryRepository:
     def _row_to_record(self, row: tuple) -> TradeRecord:
         """DB 行 → dataclass 转换（Data Mapper）。
 
-        v1 trade_history 真实列顺序（按 schema 004）：
-        [0]id [1-8]date/code/name/action/price/quantity/amount/reason
-        [9-10]emotion/session
+        v1 trade_history 真实 37 列（按 V1 业务库 PRAGMA 验证）：
+        [0]id [1]date [2]code [3]name [4]action
+        [5]price [6]quantity [7]amount [8]reason
+        [9]emotion [10]session
         [11-15]signal_time/signal_price/signal_rsi/signal_adx/signal_score
         [16-20]realtime_price/price_deviation/rsi_14/day_change_pct/score
         [21-24]expected_return/actual_pnl/note/trade_time
-        [25-26]is_real/is_paper
+        [25]is_real [26]is_paper
         [27-30]model/strategy/evaluation/snapshot_ref
+        [31]created_at
+        [32-36]target_price/stop_loss_price/stop_profit_price/risk_reward_ratio/max_hold_days
         """
         return TradeRecord(
             # [1-8] 基础
@@ -208,4 +227,9 @@ class TradeHistoryRepository:
             is_real=row[25] or 0, is_paper=row[26] or 0,
             # [27-30] Q-009 决策上下文
             model=row[27], strategy=row[28], evaluation=row[29], snapshot_ref=row[30],
+            # [31] created_at（auto default，无须 dataclass 字段）
+            # [32-36] 008 迁移补齐
+            target_price=row[32] or 0.0, stop_loss_price=row[33] or 0.0,
+            stop_profit_price=row[34] or 0.0, risk_reward_ratio=row[35] or 0.0,
+            max_hold_days=row[36] or 99999,
         )
