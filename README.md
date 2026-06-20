@@ -3,21 +3,33 @@
 > AI-Native 量化认知升级教育产品
 > 基于 v1 30 天（2026-05-18 → 06-18）调研演进
 
+> **🤖 AI Agent 必读**：本项目根目录的 [AGENTS.md](AGENTS.md) 和 [CLAUDE.md](CLAUDE.md) 是给 AI 看的协作指南，**包含 v1 → v2 迁移说明、SKILL 路由、数据访问约定、禁止事项**。新 AI 来这里请先读 AGENTS.md。
+
 ## 状态
 
-✅ **v2.0 已发布 v2.0-final** —— Sprint-0~6 完成，Mission 接近 100%
+✅ **v2.0 已发布 v2.0-final** —— Sprint-0~7 全部完成，**业务实现 100%（29/29 US）**
 
 | 维度 | 数值 |
 |------|-----:|
-| Sprint | 0/1/2/3/4/5/6 全完成 |
-| US（接口契约）| 29/29 = 100% |
-| US（业务实现）| 24/29 = 83% |
-| 测试 | 222/222 全过 |
+| Sprint | 0/1/2/3/4/5/6/7 全完成 |
+| US（业务实现）| **29/29 = 100%** |
+| 测试 | 217/217 全过 + 5 benchmark |
 | 8 维自检 | 100/100 |
-| Tag | `v2.0-final` + `sprint-6-complete` |
-| 下一步 | Sprint-7 业务完整化（5 空壳模块实现 + 8 核心文档）|
+| Tag | `v2.0-final` + `sprint-7-complete` + `v1-deprecated-v2-refactor`（v1 归档） |
 
-> **诚实声明**：5 个模块（monitor/notify/performance/scheduler/universe）目前只有 README + __init__.py，业务逻辑在 Sprint-7 实现。详见 `docs/NEW_USER_FEEDBACK_REPORT.md`。
+## 触发词与 SKILL 路由
+
+| 用户意图 | 触发词 | v2 skill |
+|----------|--------|----------|
+| 每日决策 | "ETF 决策" / "跑 ETF" / "ETF 每日检查" | `etf-daily` |
+| 回测验证 | "ETF 回测" / "ETF 验证" / "ETF 评分" | `etf-research` |
+| 量化知识 | "量化策略" / "量化教训" / "业界参考" | `quant-knowledge` |
+| 个股分析 | "个股分析" / "股票 vs 板块" | `stock-analyze` |
+| 持仓组合 | "持仓组合" / "再平衡" / "业绩归因" | `stock-portfolio` |
+
+**v1 已废弃**：`etf-quant-decision` skill 已备份为 `etf-quant-decision-v1-DEPRECATED`，v1 本地仓已删除（GitHub 保留为历史归档，tag `v1-deprecated-v2-refactor`）。
+
+**完整迁移指南**：[v1 GitHub V1_TO_V2_MIGRATION.md](https://github.com/chenqing24/etf-quant-strategy/blob/main/docs/V1_TO_V2_MIGRATION.md)
 
 ## 核心定位
 
