@@ -35,7 +35,8 @@
 
 | 版本 | 适用人群 | 文档 |
 |------|---------|------|
-| 👤 **散户投资者版** | 不会代码，跟 AI 说话即可 | [`docs/NEW_USER_GUIDE_INVESTOR.md`](docs/NEW_USER_GUIDE_INVESTOR.md) ⭐ |
+| 🗺️ **用户地图** | 不确定看哪份？看这张图 | [`docs/USER_JOURNEY_MAP.md`](docs/USER_JOURNEY_MAP.md) ⭐ |
+| 👤 **散户投资者版** | 不会代码，跟 AI 说话即可 | [`docs/NEW_USER_GUIDE_INVESTOR.md`](docs/NEW_USER_GUIDE_INVESTOR.md) |
 | 💻 **技术版** | 开发者，跑命令验证 | [`docs/NEW_USER_GUIDE.md`](docs/NEW_USER_GUIDE.md) |
 
 ## 核心定位
