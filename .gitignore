@@ -15,6 +15,7 @@ __pycache__/
 .Python
 *.egg-info/
 .pytest_cache/
+.benchmarks/   # pytest-benchmark 输出
 .coverage
 htmlcov/
 
