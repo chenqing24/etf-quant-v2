@@ -31,6 +31,13 @@
 
 **完整迁移指南**：[v1 GitHub V1_TO_V2_MIGRATION.md](https://github.com/chenqing24/etf-quant-strategy/blob/main/docs/V1_TO_V2_MIGRATION.md)
 
+**新用户上手**：
+
+| 版本 | 适用人群 | 文档 |
+|------|---------|------|
+| 👤 **散户投资者版** | 不会代码，跟 AI 说话即可 | [`docs/NEW_USER_GUIDE_INVESTOR.md`](docs/NEW_USER_GUIDE_INVESTOR.md) ⭐ |
+| 💻 **技术版** | 开发者，跑命令验证 | [`docs/NEW_USER_GUIDE.md`](docs/NEW_USER_GUIDE.md) |
+
 ## 核心定位
 
 - **v1 旧代码** = 考古资料（`etf_strategy/`），不污染 v2
