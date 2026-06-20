@@ -78,11 +78,11 @@
 
 ### 4.2 GitHub 凭据
 - **账号**：chenqing24
-- **PAT**：`GITHUB_PAT_REDACTED`
-- **PAT 权限**：`{admin, maintain, push, triage, pull}` ✅
+- **PAT**：`<在 ~/.config/qwenpaw/.env 或环境变量 GITHUB_TOKEN 配置，**禁止入仓**>`
+- **PAT 权限**：`{admin, maintain, push, triage, pull}` + `contents:write`（v2 push 必需）
 - **PAT 缺**：`pull_requests:write` ❌（创建 PR 需手动或升级 scope）
 - **v1 仓**：`chenqing24/etf-quant-strategy`（548 commits + 8 tag + tag `v1-deprecated-v2-refactor`）
-- **v2 仓**：（待创建）`chenqing24/etf-quant-v2`
+- **v2 仓**：`chenqing24/etf-quant-v2`（已创建，push 中）
 
 ### 4.3 数据源 API
 - 腾讯行情：`https://qt.gtimg.cn`（限速 2 秒）
