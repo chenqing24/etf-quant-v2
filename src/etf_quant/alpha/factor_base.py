@@ -82,6 +82,54 @@ class FactorMetadata:
     version: str = "v2.0"              # 版本号
 
 
+class FactorICMissingError(ValueError):
+    """因子入库时缺 IC 字段（按规则 27 阻断式抛错，不警告）.
+
+    L286 教训：缺 IC 字段的因子不能进 FACTOR_REGISTRY（避免"半残因子"污染 alpha 池）。
+    修复：先跑 python scripts/run_factor_evaluation.py --factor XXX 拿到 IC 再入库。
+    """
+    pass
+
+
+def register_factor(cls: type["Factor"], registry: dict | None = None) -> type["Factor"]:
+    """注册因子到 registry，校验 IC/IR/ic_eval_date 三字段必填（规则 27 阻断式）.
+
+    Args:
+        cls: 因子类（必须有 metadata 属性）
+        registry: 目标 registry（默认 None = 走调用方模块的 FACTOR_REGISTRY）
+
+    Returns:
+        cls（注册成功）
+
+    Raises:
+        FactorICMissingError: metadata.ic/ir/ic_eval_date 任一缺失时阻断
+
+    使用：
+        from etf_quant.alpha.factor_base import register_factor
+        FACTOR_REGISTRY["T5_ma5"] = register_factor(T5MA5Factor)
+    """
+    meta = cls.metadata
+    missing = []
+    if meta.ic is None:
+        missing.append("ic")
+    if meta.ir is None:
+        missing.append("ir")
+    if not hasattr(meta, "ic_eval_date") or meta.ic_eval_date is None:
+        missing.append("ic_eval_date")
+    # 规则 19：aliases 必填（非空 list）
+    if not hasattr(meta, "aliases") or not meta.aliases:
+        missing.append("aliases")
+    if missing:
+        raise FactorICMissingError(
+            f"因子 {cls.__name__}（{meta.name}）入库失败：缺 IC 字段 {missing}。"
+            f"先跑 python scripts/run_factor_evaluation.py --benchmark 510300 "
+            f"填充 {meta.name} 的 IC/IR/ic_eval_date 再入库。"
+        )
+    if registry is not None:
+        registry[meta.name] = cls
+    return cls
+
+
 @dataclass
 class FactorResult:
     """因子计算结果。"""
@@ -115,14 +163,16 @@ class Factor(ABC):
 
     @property
     def metadata(self) -> FactorMetadata:
-        """因子元数据（默认从 v2 alpha/README.md 读取 IC/IR）。"""
-        ic, ir = _lookup_ic_ir(self.name)
+        """因子元数据（US-007 动态从 data/factor_icir.csv 读 IC/IR/eval_date）."""
+        ic, ir, eval_date = _lookup_ic_ir(self.name)
         return FactorMetadata(
             name=self.name,
             category=self.category,
             description=self.description,
+            aliases=getattr(self, "_aliases", []),  # US-001 业界别名（子类可覆盖）
             ic=ic,
             ir=ir,
+            ic_eval_date=eval_date,  # US-007 入库必填
             source="v1_inherit",
         )
 
@@ -203,37 +253,50 @@ def _fill_nan(series: pd.Series, method: str = "zero") -> pd.Series:
 # IC/IR 查询表（从 v2 alpha/README.md 27 因子清单读取）
 # ────────────────────────────────────────────────────────────
 
-_IC_IR_TABLE: dict[str, tuple[float, float]] = {
-    "B1_boll_upper":    (0.0484, 0.99),
-    "V1_volume":        (0.0369, 0.84),
-    "T1_macd_bar":      (0.0423, 1.44),
-    "T2_ma_bull":       (None, None),
-    "T3_sar_trend":     (0.0252, 1.02),
-    "T4_adx_trend":     (0.0248, 0.77),
-    "M1_momentum_3d":   (None, None),
-    "M2_momentum_5d":   (0.0186, 0.89),
-    "M3_momentum_10d":  (None, None),
-    "M4_rsi":           (None, None),
-    "M5_kdj":           (None, None),
-    "M6_macd_diff":     (None, None),
-    "V2_obv":           (None, None),
-    "V3_maobv":         (None, None),
-    "V4_volume_ratio":  (None, None),
-    "W1_atr":           (None, None),
-    "W2_boll_width":    (None, None),
-    "W3_volatility":    (None, None),
-    "W4_rv":            (None, None),  # OOS/IS=0.90 见 MEMORY.md
-    "S1_vhf":           (None, None),
-    "S2_adx":           (None, None),
-    "O1_cci":           (None, None),
-    "O2_wr":            (None, None),
-    "R1_relative":      (None, None),
-    "N1_reversal_3d":   (None, None),
-    "N2_reversal_5d":   (None, None),
-    "N3_rsi_oversold":  (None, None),
-}
+_IC_IR_TABLE: dict[str, tuple[Optional[float], Optional[float], Optional[str]]] = {}  # US-007: 动态从 data/factor_icir.csv 读，初始空
+_IC_EVAL_DATE: dict[str, str] = {}  # US-007: 因子 IC 评估日期
 
 
-def _lookup_ic_ir(factor_name: str) -> tuple[Optional[float], Optional[float]]:
-    """从 IC/IR 表查找（None 表示未验证）。"""
-    return _IC_IR_TABLE.get(factor_name, (None, None))
+def _load_ic_ir_from_csv() -> None:
+    """从 data/factor_icir.csv 加载最新 IC/IR/eval_date（US-007 动态读）.
+
+    按规则 18：CSV 写入后立即读验证。
+    按规则 27：IC/IR 是因子入库必填字段，必须有数据源。
+    """
+    import csv as _csv
+    from pathlib import Path as _Path
+    csv_path = _Path(__file__).resolve().parent.parent.parent.parent / "data" / "factor_icir.csv"
+    if not csv_path.exists():
+        return
+    try:
+        with open(csv_path) as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                fname = row.get("factor_name", "")
+                ic_s = row.get("ic", "")
+                ir_s = row.get("ir", "")
+                date_s = row.get("eval_date", "")
+                if not fname:
+                    continue
+                try:
+                    ic_v = float(ic_s) if ic_s else None
+                except ValueError:
+                    ic_v = None
+                try:
+                    ir_v = float(ir_s) if ir_s else None
+                except ValueError:
+                    ir_v = None
+                _IC_IR_TABLE[fname] = (ic_v, ir_v, date_s or None)
+                if date_s:
+                    _IC_EVAL_DATE[fname] = date_s
+    except Exception:
+        pass
+
+
+# 模块加载时自动调一次
+_load_ic_ir_from_csv()
+
+
+def _lookup_ic_ir(factor_name: str) -> tuple[Optional[float], Optional[float], Optional[str]]:
+    """从 IC/IR 表查找（None 表示未验证）。US-007 加 eval_date."""
+    return _IC_IR_TABLE.get(factor_name, (None, None, None))
