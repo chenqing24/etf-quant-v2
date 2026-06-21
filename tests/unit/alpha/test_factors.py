@@ -43,9 +43,13 @@ def sample_df() -> pd.DataFrame:
 # ────────────────────────────────────────────────────────────
 
 def test_27_factors_registered():
-    """验证 27+1 因子全部注册（2026-06-21 加 T5_ma5，按业务自评揭穿）。"""
-    assert len(FACTOR_REGISTRY) == 28  # 27 原有 + 1 T5_ma5 散户新加
-    assert len(list_factors()) == 28
+    """验证 27 因子全部注册（US-002 删 M6_macd_diff 重复因子后）。"""
+    # US-001 加 T5_ma5 → 28；US-002 删 M6_macd_diff（公式与 T1 重复）→ 27
+    assert len(FACTOR_REGISTRY) == 27
+    assert len(list_factors()) == 27
+    assert "M6_macd_diff" not in FACTOR_REGISTRY  # 已删
+    assert "S2_adx" not in FACTOR_REGISTRY  # 已改名 S2_adx_strength
+    assert "S2_adx_strength" in FACTOR_REGISTRY
 
 
 def test_all_factors_compute_without_error(sample_df):
@@ -140,16 +144,6 @@ def test_m5_kdj(sample_df):
     s = result.series.dropna()
     assert (s >= 0).all() and (s <= 100).all()
 
-
-def test_m6_macd_diff(sample_df):
-    factor = get_factor("M6_macd_diff")
-    result = factor(sample_df)
-    assert result.series.notna().sum() > 0
-
-
-# ────────────────────────────────────────────────────────────
-# 量能类 (V) — 4 因子
-# ────────────────────────────────────────────────────────────
 
 def test_v1_volume(sample_df):
     factor = get_factor("V1_volume")
@@ -246,8 +240,8 @@ def test_s1_vhf(sample_df):
     assert (s >= 0).all() and (s <= 2).all()  # 可能短暂 > 1
 
 
-def test_s2_adx(sample_df):
-    factor = get_factor("S2_adx")
+def test_s2_adx_strength(sample_df):
+    factor = get_factor("S2_adx_strength")
     result = factor(sample_df)
     # S2 已 clip 到 0~1
     s = result.series.dropna()
