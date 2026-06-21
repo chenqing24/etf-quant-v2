@@ -182,26 +182,101 @@ def _restore_user_factors() -> None:
 
 
 def step2_v2_factors() -> dict:
-    """第 2 步：展示 v2 27 因子 + C21-1 解释。"""
-    # 加载真实 27 因子
+    """第 2 步：展示 v2 27 因子 + 业界别名 + IC/IR 历史表现（US-006）."""
+    # 加载真实 27 因子 + aliases
     try:
-        from etf_quant.alpha.registry import FACTOR_REGISTRY
+        from etf_quant.alpha.factors import FACTOR_REGISTRY, ALIASES_REGISTRY
         factors = list(FACTOR_REGISTRY.keys()) if FACTOR_REGISTRY else []
+        aliases_map = ALIASES_REGISTRY
     except Exception:
-        # 兜底
         factors = ["B1", "V1", "T1", "T3", "T4", "M2", "RSI", "BOLL", "MA60", "W4_RV"]
+        aliases_map = {}
+
+    # 加载 IC/IR 评估结果（US-004 输出）
+    ic_data = {}  # factor_name -> {"ic": x, "ir": y, "eval_date": "..."}
+    ic_csv = Path(__file__).resolve().parent.parent.parent.parent / "data" / "factor_icir.csv"
+    if ic_csv.exists():
+        try:
+            import csv
+            with open(ic_csv) as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    name = row.get("factor_name", "")
+                    ic_val = row.get("ic", "")
+                    ir_val = row.get("ir", "")
+                    if name and ic_val and ir_val:
+                        try:
+                            ic_data[name] = {
+                                "ic": float(ic_val),
+                                "ir": float(ir_val),
+                                "eval_date": row.get("eval_date", "?"),
+                            }
+                        except ValueError:
+                            pass
+        except Exception:
+            pass
+
+    # 组装 27 因子展示列表（含 alias + IC/IR）
+    factors_with_meta = []
+    for f in factors:
+        meta = {
+            "name": f,
+            "alias": (aliases_map.get(f, [""])[0] if aliases_map.get(f) else ""),
+            "ic": None,
+            "ir": None,
+        }
+        if f in ic_data:
+            meta["ic"] = ic_data[f]["ic"]
+            meta["ir"] = ic_data[f]["ir"]
+        factors_with_meta.append(meta)
+
+    # 按 |IC| 降序（让散户看到"哪几个因子最有效"）
+    factors_sorted = sorted(
+        factors_with_meta,
+        key=lambda x: abs(x["ic"]) if x["ic"] is not None else 0,
+        reverse=True,
+    )
+
+    # 散户视角提示（不列 A/B/C，按规则 25 默认给推荐方案）
+    has_ic = bool(ic_data)
+    if has_ic:
+        # 推荐 top 3 因子
+        top3 = [f["name"] for f in factors_sorted[:3] if f["ic"] is not None]
+        ic_summary = (
+            f"\n【IC 评估结果（510300 近 2 年，5 日前瞻）】\n"
+            f"  共 {len(ic_data)} 因子有 IC 数字，按 |IC| 降序:\n"
+        )
+        for f_meta in factors_sorted[:5]:
+            if f_meta["ic"] is not None:
+                ic_summary += f"  • {f_meta['name']:20s} ({f_meta['alias']:8s})  IC={f_meta['ic']:+.4f}  IR={f_meta['ir']:+.4f}\n"
+        ic_summary += f"  ...\n"
+        ic_summary += (
+            f"\n【AI 推荐】选这 3 个：{', '.join(top3)}\n"
+            f"  理由：IC 绝对值最大（历史上和未来收益相关性最强）。\n"
+            f"  IR 绝对值 > 1 表示因子稳健（IC 不会乱跳）。\n"
+        )
+    else:
+        ic_summary = (
+            f"\n【IC 数据暂未跑】\n"
+            f"  跑一次 IC 评估：python scripts/run_factor_evaluation.py\n"
+            f"  会输出 data/factor_icir.csv（含 27 因子 IC/IR 数字）\n"
+        )
 
     return {
         "factor_count": len(factors),
-        "factors_sample": factors[:10] if factors else [],
+        "factors_with_meta": factors_sorted,
+        "factors_sample": [f["name"] for f in factors_sorted[:10]],
         "c21_explanation": C21_EXPLANATION["C21-1"],
         "factors_27_explanation": C21_EXPLANATION["factors_27"],
         "categories": C21_EXPLANATION["factor_categories"],
+        "ic_data": ic_data,
+        "ic_summary": ic_summary,
         "hint": (
-            f"【第 2 步：v2 27 因子】\n\n"
+            f"【第 2 步：v2 27 因子（含 IC/IR 历史表现）】\n\n"
             f"v2 仓共 {len(factors)} 个因子（按 registry 实际加载）。\n"
+            f"每个因子有业界通用别名（MA5/RSI/MACD/ATR/BOLL_W 等）。\n"
             f"核心策略：C21-1 = BOLL 中轨 + MA60 入场过滤（只用 2 个条件）。\n\n"
-            f"详细解释见下：\n"
+            f"{ic_summary}"
         ),
     }
 
