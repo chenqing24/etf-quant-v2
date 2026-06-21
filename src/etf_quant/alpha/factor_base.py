@@ -69,13 +69,15 @@ class FactorCategory(Enum):
 
 @dataclass
 class FactorMetadata:
-    """因子元数据（含 IC/IR 验证值）。"""
+    """因子元数据（含 IC/IR 验证值 + 业界别名）。规则 28：每个因子必须带至少 1 个业界通用别名。"""
 
     name: str                          # 因子 ID（如 B1_boll_upper）
     category: FactorCategory           # 分类
     description: str                   # 中文描述
+    aliases: list[str] = field(default_factory=list)  # 业界通用名（MA5/RSI/MACD/ATR 等；规则 19 默认 deny：空 list）
     ic: Optional[float] = None         # IC（Spearman rank correlation）
     ir: Optional[float] = None         # IR（IC.mean() / IC.std()）
+    ic_eval_date: Optional[str] = None # IC 评估日期 YYYY-MM-DD（规则 27：入库必填，Sprint 3 US-007 强制）
     source: str = "v1_inherit"         # 来源（v1_inherit / v2_new / v9_verified）
     version: str = "v2.0"              # 版本号
 

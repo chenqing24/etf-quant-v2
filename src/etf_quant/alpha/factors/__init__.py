@@ -1,10 +1,18 @@
 """
-alpha/factors/__init__.py — 27 因子注册入口（US-013）
+alpha/factors/__init__.py — 28 因子注册入口（US-013，2026-06-21 加 T5_ma5）
 
 按规则 11（先调研再实现）+ 规则 14（架构改造有回归测试）：
-    - 27 因子 = 26 继承（v1 业界标准公式）+ 1 W4 RV（v9 唯一稳健新写）
+    - 28 因子 = 26 继承（v1 业界标准公式）+ 1 W4 RV（v9 唯一稳健新写）+ 1 T5_ma5（散户新加，按业务自评 L270 揭穿）
     - 工厂模式：FACTOR_REGISTRY[name] -> Factor class
     - 列表模式：ALL_FACTORS 顺序遍历
+
+被谁调用（按规则 18 / v1 L118）：
+    - src/etf_quant/alpha/registry.py（向后兼容导出）
+    - src/etf_quant/backtest/comprehensive_validator.py（4 验证器跑单因子综合分）
+    - src/etf_quant/alpha/analysis/batch_ic.py（批量 IC 计算）
+    - tests/unit/test_factors.py（27+1 因子单测）
+    - skills/quantor-onboard/scripts/run_alpha.py（散户 alpha 引导）
+    - skills/quantor-onboard/scripts/business_check.py（业务自评因子数校验）
 
 业界参考（按规则 13）：
     - WorldQuant 101 Alphas (Kakushadze 2016) 因子注册表模式
@@ -90,6 +98,38 @@ FACTOR_REGISTRY: dict[str, type[Factor]] = {
     "N3_rsi_oversold": N3RSIOversoldFactor,
 }
 
+# 28 因子业界别名表（规则 28：每个因子至少 1 个业界通用缩写）
+ALIASES_REGISTRY: dict[str, list[str]] = {
+    "T1_macd_bar": ["MACD", "MACD红柱", "MACD_hist", "MACD柱"],
+    "T2_ma_bull": ["MA20", "MA20多头", "MA_BULL"],
+    "T3_sar_trend": ["SAR", "抛物线", "MA10代理"],
+    "T4_adx_trend": ["ADX", "ADX趋势", "DMI趋势"],
+    "T5_ma5": ["MA5", "5日均线", "MA_5"],
+    "M1_momentum_3d": ["MOM_3D", "3日动量", "ROC_3"],
+    "M2_momentum_5d": ["MOM_5D", "5日动量", "ROC_5"],
+    "M3_momentum_10d": ["MOM_10D", "10日动量", "ROC_10"],
+    "M4_rsi": ["RSI", "RSI(14)", "Relative Strength Index"],
+    "M5_kdj": ["KDJ", "KDJ_K", "随机指标"],
+    "M6_macd_diff": ["MACD_DIF", "MACD差离值", "DIF"],
+    "V1_volume": ["VOL", "成交量", "VOL_MA5"],
+    "V2_obv": ["OBV", "能量潮", "On Balance Volume"],
+    "V3_maobv": ["OBV_MA", "OBV均线", "OBV_MA20"],
+    "V4_volume_ratio": ["V_RATIO", "量比", "VR"],
+    "W1_atr": ["ATR", "ATR(14)", "真实波幅"],
+    "W2_boll_width": ["BOLL_W", "布林带宽", "BW"],
+    "W3_volatility": ["VOLAT", "波动率", "STD_20"],
+    "W4_rv": ["RV", "已实现波动率变化", "Realized Vol"],
+    "B1_boll_upper": ["BOLL_UP", "布林上轨", "Bollinger Upper"],
+    "S1_vhf": ["VHF", "垂直水平过滤", "Vertical Horizontal Filter"],
+    "S2_adx": ["ADX_S", "ADX强度"],
+    "O1_cci": ["CCI", "CCI(20)", "顺势指标"],
+    "O2_wr": ["WR", "WR(14)", "Williams %R", "威廉指标"],
+    "R1_relative": ["RPS", "RS", "相对强弱"],
+    "N1_reversal_3d": ["REVERSAL_3D", "3日反转", "均值回归_3D"],
+    "N2_reversal_5d": ["REVERSAL_5D", "5日反转", "均值回归_5D"],
+    "N3_rsi_oversold": ["RSI_OS", "RSI超卖", "RSI_Oversold"],
+}
+
 # 顺序列表（保证计算可重复）
 ALL_FACTORS: list[type[Factor]] = list(FACTOR_REGISTRY.values())
 
@@ -144,6 +184,7 @@ __all__ = [
     "N3RSIOversoldFactor",
     "FACTOR_REGISTRY",
     "ALL_FACTORS",
+    "ALIASES_REGISTRY",
     "get_factor",
     "list_factors",
 ]
