@@ -54,6 +54,12 @@
 - Sprint 复盘模板（docs/sprint-reviews/）
 - 8 维自评（满分 100）
 - 沉淀教训（MEMORY.md）
+- **v3 增量文档同步**（2026-06-21 业务自评 L295 教训补）：
+  - CHANGELOG.md — 加 v3 mission 完成条目
+  - PRD.md — 加 v3 新规则（规则 27 因子入库 IC / 规则 28 别名）
+  - DATA_DICTIONARY.md — 加 factor_icir.csv + history CSV schema
+  - MISSION_FINAL_REPORT_YYYYMMDD.md — v3 mission 完成报告
+  - （可选）ARCHITECTURE.md / INTERFACE_CONTRACT.md / RELEASE_NOTES.md / README.md / NEW_USER_GUIDE.md
 
 ## 7. Phase 6：Mission 完结
 

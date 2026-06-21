@@ -135,3 +135,54 @@
 | 008-012 | v1 业务库 19 新列 + 4 新表 |
 | 013-015 | Sprint-4 修列名（3 迁移 SQL）|
 | 016-019 | Sprint-5 v1 → v2 数据迁移（71034 行）|
+
+## 5. v3 增量数据源（2026-06-21 — mission-20260621-193542）
+
+### 5.1 factor_icir.csv（IC 评估结果）
+
+> **位置**：`data/factor_icir.csv`
+> **生成**：`python scripts/run_factor_evaluation.py`（按规则 15 数据源统一）
+> **业务**：27 因子在 510300（沪深 300 ETF）近 2 年（504 交易日）IC/IR 评估
+> **业界参考**：Grinold & Kahn 2000 *Active Portfolio Management* Ch 4
+
+| 字段 | 类型 | 说明 | 示例 |
+|------|------|------|------|
+| factor_name | TEXT | 因子 ID（27 因子） | T5_ma5 |
+| ic | REAL | Spearman ρ（IC 均值） | -0.3604 |
+| ir | REAL | IC.mean() / IC.std() | -1.6166 |
+| ic_std | REAL | IC 标准差 | 0.223 |
+| sample_count | INTEGER | 滚动窗口数 | 89 |
+| forward_window | INTEGER | 前瞻 N 日（默认 5） | 5 |
+| eval_date | TEXT | 评估时间（含时分） | 2026-06-21 20:01:38 |
+| benchmark | TEXT | 基准 ETF（默认 510300） | 510300 |
+
+### 5.2 factor_icir_history.csv（季度对比历史）
+
+> **位置**：`data/factor_icir_history.csv`
+> **生成**：每次跑 `run_factor_evaluation.py` 自动 append（按规则 18 CSV 必验证）
+> **业务**：季度 IC 巡检的数据源（US-008/010）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| （同 factor_icir.csv） | | 含 eval_date 区分不同次跑 |
+
+**append 模式防覆盖**（按规则 18）：
+- `mode='a'`，header 仅首次写
+- 多次跑行数累加（3 次跑 = 81 行）
+
+### 5.3 reports/ic_decay_YYYYMMDD.md（季度巡检报告）
+
+> **位置**：`reports/ic_decay_YYYYMMDD.md`
+> **生成**：`python scripts/check_ic_decay.py`（US-010 实施）
+> **业务**：对比上季度 vs 本季度 IC，识别衰减因子
+
+**报告结构**：
+1. 概况（巡检因子数 + 衰减因子数）
+2. ⚠️ 衰减因子表格（|ΔIC|>0.03 或 |IR|<0.5）
+3. AI 建议（降权/弃用/移到参考池）
+
+### 5.4 业务自评数据源（v3 增量）
+
+> **位置**：`missions/mission-20260621-193542/scripts/business_check.py`
+> **业务**：9 维度 225 分自动断言（v2 5 维度 125 分基础上 +4 维度）
+> **业界参考**：DORA Metrics + AWS Well-Architected
