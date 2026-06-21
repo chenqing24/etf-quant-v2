@@ -43,9 +43,9 @@ def sample_df() -> pd.DataFrame:
 # ────────────────────────────────────────────────────────────
 
 def test_27_factors_registered():
-    """验证 27 因子全部注册。"""
-    assert len(FACTOR_REGISTRY) == 27
-    assert len(list_factors()) == 27
+    """验证 27+1 因子全部注册（2026-06-21 加 T5_ma5，按业务自评揭穿）。"""
+    assert len(FACTOR_REGISTRY) == 28  # 27 原有 + 1 T5_ma5 散户新加
+    assert len(list_factors()) == 28
 
 
 def test_all_factors_compute_without_error(sample_df):
