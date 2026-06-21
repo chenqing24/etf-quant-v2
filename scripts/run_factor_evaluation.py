@@ -172,7 +172,7 @@ def main():
 
     # 写当前 CSV
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # US-010: 含时分，避免同日合并
     rows = []
     for r in results:
         rows.append({
