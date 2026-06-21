@@ -260,7 +260,12 @@ def step4_validate(factor_name: str = "user_factor") -> dict:
         score_before = 0.426  # v2 baseline
         score_after = result.composite_score
         pass_threshold = 0.6
-        verdict = "放弃" if score_after < 0.4 else ("大改" if score_after < 0.6 else "小资金实盘")
+        verdict = (
+            "放弃" if score_after < 0.4
+            else "大改" if score_after < 0.6
+            else "小资金实盘" if score_after < 0.7
+            else "继续观察"
+        )
     except Exception as e:
         score_before = 0.426
         score_after = 0.426
@@ -291,6 +296,48 @@ def step4_validate(factor_name: str = "user_factor") -> dict:
             f"可能原因：1）因子与现有 C21-1 重复；2）过拟合某个时段；3）样本量不足。"
         )
 
+    # US-008: 决策建议（基于综合分阈值）
+    decision_map = {
+        "放弃": {
+            "decision": "放弃",
+            "rationale": f"综合分 {score_after:.3f} < 0.4，4 验证器都不通过",
+            "next_steps": [
+                "1. 改因子定义——是不是逻辑写错了？",
+                "2. 换数据源——这个信号在别的数据上有效？",
+                "3. 退一步——回到 C21-1（BOLL + MA60）这个 baseline",
+            ],
+        },
+        "大改": {
+            "decision": "大改",
+            "rationale": f"综合分 {score_after:.3f} 在 [0.4, 0.6]，可能过拟合某个时段",
+            "next_steps": [
+                "1. 跑 Walk Forward 滚动回测（2020-2025 不同子区间）",
+                "2. 换测试期——是不是只在某个牛/熊市有效？",
+                "3. 简化因子——去掉一半条件看分数变化",
+            ],
+        },
+        "小资金实盘": {
+            "decision": "小资金实盘",
+            "rationale": f"综合分 {score_after:.3f} 在 [0.6, 0.7]，值得继续观察",
+            "next_steps": [
+                "1. 用 5-10% 总资金实盘 3 个月",
+                "2. 每天记实际盈亏，对比回测",
+                "3. 每月跑 1 次验证，看分数是否稳定",
+            ],
+        },
+        "继续观察": {
+            "decision": "继续观察",
+            "rationale": f"综合分 {score_after:.3f} ≥ 0.7，4 验证器全过",
+            "next_steps": [
+                "1. 加大资金到 20-30% 总仓位",
+                "2. 设止盈止损（用 run_risk.py 配）",
+                "3. 季度复盘——因子是不是衰减？",
+            ],
+        },
+    }
+
+    decision_info = decision_map.get(verdict, decision_map["大改"])
+
     return {
         "factor_name": factor_name,
         "score_before": score_before,
@@ -298,6 +345,9 @@ def step4_validate(factor_name: str = "user_factor") -> dict:
         "delta": delta,
         "pass_threshold": pass_threshold,
         "verdict": verdict,
+        "decision": decision_info["decision"],
+        "decision_rationale": decision_info["rationale"],
+        "next_steps": decision_info["next_steps"],
         "root_cause_explanation": root_cause,
         "four_validators": (
             "Walk Forward / Monte Carlo / Cross ETF / Consistency "

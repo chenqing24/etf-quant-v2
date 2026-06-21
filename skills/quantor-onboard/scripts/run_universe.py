@@ -204,7 +204,15 @@ def step2_show_default() -> dict:
         "hint": (
             "【第 2 步：v2 默认池】\n\n"
             f"v2 默认核心池 {default_pool['core_count']} 只 + 参考池 {default_pool['reference_count']} 只。\n"
-            "为什么是这 14 只？看 4 个条件：\n\n"
+            "为什么是这 14 只？看 4 个条件：\n"
+            "• 流动性（日均成交额 > 5000 万）\n"
+            "• 盘子（AUM > 1 亿）\n"
+            "• 跟踪误差（< 0.5%）\n"
+            "• 成立年限（> 1 年，推荐 > 3 年）\n\n"
+            "如果你想自己选，去第 3 步：\n"
+            "python run_universe.py modify --add <code> --remove <code>\n\n"
+            "例：把 159915 加到核心池，把 512170 移到参考池：\n"
+            "python run_universe.py modify --add 159915 --remove 512170\n"
         ),
     }
 
