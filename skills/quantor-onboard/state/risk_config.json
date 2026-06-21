@@ -1,0 +1,10 @@
+{
+  "stop_loss_pct": -0.05,
+  "take_profit_pct": 0.2,
+  "min_hold_days": 5,
+  "max_hold_days": 99999,
+  "max_holdings": 2,
+  "max_position_pct": 0.3,
+  "schema_version": 1,
+  "updated_at": "2026-06-21T09:20:04.136586"
+}

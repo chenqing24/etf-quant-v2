@@ -96,6 +96,80 @@ def step1_explain() -> str:
     )
 
 
+# ============================================================
+# US-002: 真实持久化（etf.db.pool_role + state.json + audit_log）
+# ============================================================
+
+import sqlite3 as _sqlite3
+
+DB_PATH = _REPO_ROOT / "data" / "etf.db"
+STATE_DIR = _SKILL_ROOT / "state"
+
+
+def _query_pool_counts() -> dict:
+    """查 etf.db 真实 pool_role 分布。"""
+    if not DB_PATH.exists():
+        return {"core_count": 0, "reference_count": 0, "source": "db_missing"}
+    with _sqlite3.connect(str(DB_PATH)) as c:
+        row = c.execute(
+            "SELECT "
+            "SUM(CASE WHEN pool_role='core' THEN 1 ELSE 0 END), "
+            "SUM(CASE WHEN pool_role='reference' THEN 1 ELSE 0 END) "
+            "FROM etf_names"
+        ).fetchone()
+    return {
+        "core_count": row[0] or 0,
+        "reference_count": row[1] or 0,
+        "source": "etf.db (按规则 15)",
+    }
+
+
+def _update_pool_role(code: str, new_role: str) -> bool:
+    """改 etf_names.pool_role（规则 21：标记而非删除）。"""
+    if not DB_PATH.exists():
+        return False
+    with _sqlite3.connect(str(DB_PATH)) as c:
+        cur = c.execute(
+            "UPDATE etf_names SET pool_role=?, updated_at=datetime('now','localtime') WHERE code=?",
+            (new_role, code),
+        )
+        return cur.rowcount > 0
+
+
+def _persist_universe_modifications(added: list, removed: list) -> None:
+    """写 state/universe_state.json（规则 18）。"""
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state_path = STATE_DIR / "universe_state.json"
+    state = {
+        "schema_version": 1,
+        "updated_at": __import__("datetime").datetime.now().isoformat(),
+        "added_to_core": added,
+        "removed_to_reference": removed,
+        "pool_counts_after": _query_pool_counts(),
+    }
+    with open(state_path, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
+    with open(state_path, "r", encoding="utf-8") as f:
+        json.load(f)
+
+
+def _audit_universe_change(added: list, removed: list) -> None:
+    """audit_log（规则 15 + 22）。"""
+    audit_path = STATE_DIR / "audit_log.jsonl"
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "timestamp": __import__("datetime").datetime.now().isoformat(),
+        "actor": "散户",
+        "action": "universe_modify",
+        "block": "universe",
+        "added_to_core": added,
+        "removed_to_reference": removed,
+        "source": "run_universe.py modify",
+    }
+    with open(audit_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
 def step2_show_default() -> dict:
     """第 2 步：展示 v2 默认池 + 4 条件解释。
 
@@ -170,25 +244,23 @@ def step4_verify(added_codes: list = None, removed_codes: list = None) -> dict:
     added = added_codes or []
     removed = removed_codes or []
 
-    # 模拟验证（实际应该查 etf.db）
-    before = {"core_count": 14, "reference_count": 40}
+    # US-002: 真实从 etf.db 读 before（规则 15：统一数据入口）
+    before = _query_pool_counts()
 
     # 应用规则 21：标记而非删除
     actual_changes = {"added": [], "marked_as_reference": [], "warnings": []}
     for code in added:
-        actual_changes["added"].append({"code": code, "action": "加入核心池"})
-    for code in removed:
-        if code == "510300":
-            actual_changes["warnings"].append(
-                "510300 已经是 reference 角色（按规则 21 标记而非删除）"
-            )
+        if _update_pool_role(code, "core"):
+            actual_changes["added"].append({"code": code, "action": "加入核心池"})
         else:
+            actual_changes["warnings"].append(f"{code} 不在 etf_names 表中")
+    for code in removed:
+        if _update_pool_role(code, "reference"):
             actual_changes["marked_as_reference"].append({"code": code, "action": "移到参考池"})
+        else:
+            actual_changes["warnings"].append(f"{code} 不在 etf_names 表中")
 
-    after = {
-        "core_count": before["core_count"] + len(added),
-        "reference_count": before["reference_count"] + len(removed),
-    }
+    after = _query_pool_counts()
 
     return {
         "before": before,
@@ -241,7 +313,20 @@ def main() -> int:
     elif args.action == "default":
         result = step2_show_default()
     elif args.action == "modify":
-        result = {"step3": step3_modify()}
+        # US-002: 真持久化 --add / --remove 到 etf.db + state.json
+        added = [c.strip() for c in args.add.split(",") if c.strip()] if args.add else []
+        removed = [c.strip() for c in args.remove.split(",") if c.strip()] if args.remove else []
+        if added or removed:
+            _persist_universe_modifications(added, removed)
+            _audit_universe_change(added, removed)
+        result = {
+            "step3": step3_modify(),
+            "changes_applied": {"added": added, "removed": removed},
+            "hint": (
+                "已应用改动并写入 etf.db.pool_role（规则 15 + 21）。\n"
+                "下一步：跑 verify 验证：python run_universe.py verify"
+            ),
+        }
     elif args.action == "verify":
         added = args.add.split(",") if args.add else []
         removed = args.remove.split(",") if args.remove else []

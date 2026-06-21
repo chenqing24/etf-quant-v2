@@ -1,0 +1,11 @@
+{
+  "current_block": "risk",
+  "completed_blocks": [
+    "universe",
+    "alpha",
+    "risk"
+  ],
+  "skipped_blocks": [],
+  "user_choices": {},
+  "checkpoint_acks": {}
+}

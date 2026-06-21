@@ -67,34 +67,54 @@ def run_block(block_name: str, state: dict) -> dict:
         return {"error": f"执行 {block_name} 失败: {e}"}
 
 
-def run_full_onboard() -> dict:
-    """完整 3 块引导。"""
+def run_full_onboard(confirm: bool = False) -> dict:
+    """US-005: 强制走 3 块对话。
+
+    不带 --confirm: 只跑 current_block 的第 1 步，不标 completed
+    带 --confirm: 标记当前块完成，推进到下一块
+    """
     state = load_state()
-    results = {}
 
-    for block in BLOCKS:
-        # checkpoint
-        if block in state["completed_blocks"]:
-            results[block] = {"status": "skipped", "reason": "已完成"}
-            continue
+    # 防御：如果已完成 3 块，提示并返回
+    if len(state["completed_blocks"]) >= len(BLOCKS):
+        return {
+            "state": state,
+            "status": "all_done",
+            "summary": (
+                f"已完成 3 块：{' → '.join(state['completed_blocks'])}\n"
+                f"如果想重来：python run_onboard.py reset"
+            ),
+        }
 
-        results[block] = run_block(block, state)
+    current = state["current_block"]
+    block_result = run_block(current, state)
 
-        # 更新 state
-        state["current_block"] = block
-        state["completed_blocks"].append(block)
+    if confirm:
+        # 用户确认完成当前块
+        if current not in state["completed_blocks"]:
+            state["completed_blocks"].append(current)
+        # 推进到下一块
+        idx = BLOCKS.index(current)
+        if idx + 1 < len(BLOCKS):
+            state["current_block"] = BLOCKS[idx + 1]
         save_state(state)
 
     return {
         "state": state,
-        "blocks": results,
-        "summary": (
-            f"完成 3 块引导：{' → '.join(state['completed_blocks'])}\n"
-            f"你的量化模型初稿：\n"
-            f"• 择股：14 核心 + 40 参考（可调）\n"
-            f"• 择时：C21-1 + 你的因子（可加）\n"
-            f"• 仓位：6 个关键纪律（可调）"
-        ),
+        "current_block": current,
+        "block_result_summary": {
+            "block": current,
+            "keys": list(block_result.keys())[:5] if isinstance(block_result, dict) else "non-dict",
+            "hint": (
+                f"【对话完成提示】\n\n"
+                f"你刚跑了 {current} 块的引导（见 block_result_summary）。\n"
+                f"如果你看明白了，告诉我'确认'，我会把这一块标 completed 并推进到下一块。\n"
+                f"如果还不明白，继续问我。\n\n"
+                f"下一步：\n"
+                f"python run_onboard.py onboard --confirm  # 确认本块并推进\n"
+                f"python run_onboard.py status  # 看当前状态"
+            ),
+        },
     }
 
 
@@ -105,12 +125,13 @@ def main() -> int:
         choices=["onboard", "status", "reset", "skip", "back"],
     )
     parser.add_argument("--block", choices=BLOCKS, help="指定 block（skip/back 用）")
+    parser.add_argument("--confirm", action="store_true", help="确认完成当前块并推进（US-005）")
     args = parser.parse_args()
 
     state = load_state()
 
     if args.action == "onboard":
-        result = run_full_onboard()
+        result = run_full_onboard(confirm=args.confirm)
     elif args.action == "status":
         result = {"state": state}
     elif args.action == "reset":

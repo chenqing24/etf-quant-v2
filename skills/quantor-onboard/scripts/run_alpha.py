@@ -89,6 +89,98 @@ def step1_what_is_factor() -> str:
     )
 
 
+# ============================================================
+# US-003: 真实注册因子（registry + state.json + audit_log）
+# ============================================================
+
+ALPHA_STATE_PATH = _SKILL_ROOT / "state" / "alpha_state.json"
+
+
+def _register_user_factor(name: str) -> None:
+    """散户因子注册：写入 state.json（规则 18）。
+
+    注意：注册到 FACTOR_REGISTRY（运行期）需要继承 Factor 类；
+    这里用 state.json 持久化"散户添加"的事实，不改 v2 仓源码。
+    """
+    # 在 FACTOR_REGISTRY 加动态代理类（运行期有效）
+    from etf_quant.alpha.registry import FACTOR_REGISTRY
+    from etf_quant.alpha.factor_base import Factor, FactorMetadata, FactorCategory
+
+    class UserFactor(Factor):
+        metadata = FactorMetadata(
+            name=name,
+            category=FactorCategory.MOMENTUM,
+            description=f"散户自定义因子：{name}",
+        )
+
+        def compute(self, df):
+            return {"score": 0.0}  # 占位，业务侧需要写实现
+
+    FACTOR_REGISTRY[name] = UserFactor
+
+
+def _count_registry() -> int:
+    from etf_quant.alpha.registry import FACTOR_REGISTRY
+    return len(FACTOR_REGISTRY)
+
+
+def _persist_alpha_modifications(factor: str, added: bool) -> None:
+    ALPHA_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # 读已有 state，追加 user_factors list
+    user_factors = []
+    if ALPHA_STATE_PATH.exists():
+        try:
+            with open(ALPHA_STATE_PATH, "r", encoding="utf-8") as f:
+                old = json.load(f)
+            user_factors = old.get("user_factors", [])
+        except Exception:
+            pass
+    if added and factor not in user_factors:
+        user_factors.append(factor)
+    state = {
+        "schema_version": 1,
+        "updated_at": __import__("datetime").datetime.now().isoformat(),
+        "last_factor": factor,
+        "user_factors": user_factors,
+        "added_to_registry": added,
+        "registry_count_after": _count_registry(),
+    }
+    with open(ALPHA_STATE_PATH, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
+    with open(ALPHA_STATE_PATH, "r", encoding="utf-8") as f:
+        json.load(f)
+
+
+def _audit_alpha_change(factor: str, added: bool) -> None:
+    audit_path = _SKILL_ROOT / "state" / "audit_log.jsonl"
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "timestamp": __import__("datetime").datetime.now().isoformat(),
+        "actor": "散户",
+        "action": "alpha_add_factor",
+        "block": "alpha",
+        "factor": factor,
+        "added_to_registry": added,
+        "registry_count_after": _count_registry(),
+        "source": "run_alpha.py add",
+    }
+    with open(audit_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _restore_user_factors() -> None:
+    """从 alpha_state.json 恢复散户因子到 FACTOR_REGISTRY。"""
+    if not ALPHA_STATE_PATH.exists():
+        return
+    try:
+        with open(ALPHA_STATE_PATH, "r", encoding="utf-8") as f:
+            state = json.load(f)
+        for factor in state.get("user_factors", []):
+            _register_user_factor(factor)
+    except Exception:
+        pass  # 容错：损坏的 state 不影响启动
+
+
 def step2_v2_factors() -> dict:
     """第 2 步：展示 v2 27 因子 + C21-1 解释。"""
     # 加载真实 27 因子
@@ -234,6 +326,8 @@ def run_interactive() -> dict:
 
 
 def main() -> int:
+    # US-003: 启动时从 state.json 恢复散户因子
+    _restore_user_factors()
     parser = argparse.ArgumentParser(description="Quantor Onboard - Alpha（择时）")
     parser.add_argument(
         "action", nargs="?", default="interactive",
@@ -249,7 +343,23 @@ def main() -> int:
     elif args.action == "factors":
         result = step2_v2_factors()
     elif args.action == "add":
-        result = {"step3": step3_user_adds()}
+        # US-003: 真注册因子到 FACTOR_REGISTRY + state.json
+        from etf_quant.alpha.registry import FACTOR_REGISTRY
+        added = args.factor not in FACTOR_REGISTRY
+        if added:
+            _register_user_factor(args.factor)
+        _persist_alpha_modifications(args.factor, added)
+        _audit_alpha_change(args.factor, added)
+        result = {
+            "step3": step3_user_adds(),
+            "factor": args.factor,
+            "added_to_registry": added,
+            "registry_count_after": _count_registry(),
+            "hint": (
+                f"因子 '{args.factor}' 已写入 state.json（{('新增' if added else '已存在')}）。\n"
+                f"下一步：跑 validate 验证综合分：python run_alpha.py validate --factor {args.factor}"
+            ),
+        }
     elif args.action == "validate":
         result = step4_validate(args.factor)
     elif args.action == "test":

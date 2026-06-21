@@ -159,19 +159,20 @@ def step3_user_modify() -> str:
     )
 
 
-def step4_verify(changes: dict = None) -> dict:
-    """第 4 步：跑 portfolio rebalance 验证改动。
+# ============================================================
+# US-004: 持久化纪律配置（state.json + audit_log）
+# ============================================================
 
-    Args:
-        changes: {field: new_value} 改动字典
+RISK_CONFIG_PATH = _SKILL_ROOT / "state" / "risk_config.json"
 
-    Returns:
-        dict 含 before/after/impact
-    """
-    changes = changes or {}
 
-    # 默认 v2 配置
-    before = {
+def _load_risk_config() -> dict:
+    """读 risk_config.json（不存在返回 v2 默认）。"""
+    import json as _json
+    if RISK_CONFIG_PATH.exists():
+        with open(RISK_CONFIG_PATH, "r", encoding="utf-8") as f:
+            return _json.load(f)
+    return {
         "stop_loss_pct": 0.10,
         "take_profit_pct": 0.20,
         "min_hold_days": 5,
@@ -179,6 +180,62 @@ def step4_verify(changes: dict = None) -> dict:
         "max_holdings": 2,
         "max_position_pct": 0.50,
     }
+
+
+def _persist_risk_config(changes: dict) -> None:
+    """写 risk_config.json（规则 18：JSON 完整性 + 立即验证）。"""
+    import json as _json
+    RISK_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    current = _load_risk_config()
+    current.update(changes)
+    current["schema_version"] = 1
+    current["updated_at"] = __import__("datetime").datetime.now().isoformat()
+    with open(RISK_CONFIG_PATH, "w", encoding="utf-8") as f:
+        _json.dump(current, f, ensure_ascii=False, indent=2)
+    # 立即验证（规则 18）
+    with open(RISK_CONFIG_PATH, "r", encoding="utf-8") as f:
+        _json.load(f)
+
+
+def _audit_risk_change(changes: dict) -> None:
+    """audit_log：纪律变更必须留痕（规则 15 + 22）。"""
+    import json as _json
+    audit_path = _SKILL_ROOT / "state" / "audit_log.jsonl"
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "timestamp": __import__("datetime").datetime.now().isoformat(),
+        "actor": "散户",
+        "action": "risk_modify",
+        "block": "risk",
+        "changes": changes,
+        "source": "run_risk.py modify",
+    }
+    with open(audit_path, "a", encoding="utf-8") as f:
+        f.write(_json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def step4_verify(changes: dict = None, before: dict = None) -> dict:
+    """第 4 步：跑 portfolio rebalance 验证改动。
+
+    Args:
+        changes: {field: new_value} 改动字典
+        before: 改动前基线（默认 v2 默认值，US-004 可传 state.json 真实值）
+
+    Returns:
+        dict 含 before/after/impact
+    """
+    changes = changes or {}
+
+    # 默认 v2 配置
+    if before is None:
+        before = {
+            "stop_loss_pct": 0.10,
+            "take_profit_pct": 0.20,
+            "min_hold_days": 5,
+            "max_hold_days": 99999,
+            "max_holdings": 2,
+            "max_position_pct": 0.50,
+        }
 
     # 应用改动（应用规则 15：走 DataLoader/DataWriter）
     after = {**before, **changes}
@@ -251,7 +308,7 @@ def main() -> int:
         "action", nargs="?", default="interactive",
         choices=["interactive", "explain", "default", "modify", "verify", "test"],
     )
-    parser.add_argument("--stop_loss", type=float, help="止损百分比（0.05 = 5%）")
+    parser.add_argument("--stop_loss", type=float, help="止损百分比（0.05 = 5%%）")
     parser.add_argument("--max_holdings", type=int, help="最大持仓数")
     parser.add_argument("--max_position_pct", type=float, help="单只最大占比")
     args = parser.parse_args()
@@ -263,7 +320,26 @@ def main() -> int:
     elif args.action == "default":
         result = step2_v2_default()
     elif args.action == "modify":
-        result = {"step3": step3_user_modify()}
+        # US-004: 真正持久化 --stop_loss / --max_holdings / --max_position_pct
+        changes = {}
+        if args.stop_loss is not None:
+            changes["stop_loss_pct"] = args.stop_loss
+        if args.max_holdings is not None:
+            changes["max_holdings"] = args.max_holdings
+        if args.max_position_pct is not None:
+            changes["max_position_pct"] = args.max_position_pct
+        if changes:
+            _persist_risk_config(changes)
+            _audit_risk_change(changes)
+        result = {
+            "step3": step3_user_modify(),
+            "changes_applied": changes,
+            "hint": (
+                "已应用改动并写入 state.json（规则 15 数据统一入口）。\n"
+                "下一步：跑 verify 验证，或继续到第 4 步："
+                "python run_risk.py verify"
+            ),
+        }
     elif args.action == "verify":
         changes = {}
         if args.stop_loss is not None:
@@ -272,7 +348,13 @@ def main() -> int:
             changes["max_holdings"] = args.max_holdings
         if args.max_position_pct is not None:
             changes["max_position_pct"] = args.max_position_pct
-        result = step4_verify(changes)
+        # 读 state.json 看持久化结果（不再用 in-memory before）
+        persisted = _load_risk_config()
+        before = {k: v for k, v in persisted.items() if k in [
+            "stop_loss_pct", "take_profit_pct", "min_hold_days",
+            "max_hold_days", "max_holdings", "max_position_pct",
+        ]}
+        result = step4_verify(changes, before=before)
     elif args.action == "test":
         test_result = {
             "step1_length": len(step1_what_is_discipline()),

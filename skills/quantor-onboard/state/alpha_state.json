@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-06-21T09:31:07.323745",
+  "last_factor": "RSI_30_BOTTOM",
+  "user_factors": [
+    "RSI_30_BOTTOM",
+    "BREAK_20D_HIGH"
+  ],
+  "added_to_registry": false,
+  "registry_count_after": 29
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-06-21T09:25:27.904820",
+  "added_to_core": [
+    "159915"
+  ],
+  "removed_to_reference": [
+    "512170"
+  ],
+  "pool_counts_after": {
+    "core_count": 14,
+    "reference_count": 40,
+    "source": "etf.db (按规则 15)"
+  }
+}
