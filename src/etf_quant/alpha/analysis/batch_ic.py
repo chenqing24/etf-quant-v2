@@ -152,22 +152,42 @@ class BatchICEvaluator:
         return results
 
     def _calculate_factor_ic_series(self, df: pd.DataFrame, factor_name: str) -> list[float]:
-        """对单因子在所有 (code, date) 上算 IC 序列。"""
-        if factor_name not in df.columns:
+        """对单因子算滚动 IC 序列（适配单标的场景，v3 mission US-004 修复）。
+
+        逻辑：
+            - 单标的（1 个 code）：每 window_size 日算 1 个 IC，步长 step_size
+              → 504 日 / 60 日窗 / 5 日步长 ≈ 89 个 IC
+            - 多标的：每 (code, date) pair 算 1 个横截面 IC（原行为）
+        """
+        if factor_name not in df.columns or "close" not in df.columns:
             return []
         f = df[factor_name]
-        # 前瞻 N 日收益
-        if "close" not in df.columns:
-            return []
         fwd_ret = df.groupby("code")["close"].pct_change(self.forward_window).shift(-self.forward_window)
-        # 按 (code, date) pair 算 Spearman ρ
+
+        codes = df["code"].unique() if "code" in df.columns else [None]
         ic_list = []
-        for _, grp in df.groupby("code"):
-            f_grp = f.loc[grp.index]
-            r_grp = fwd_ret.loc[grp.index]
-            ic_val = calculate_ic(f_grp, r_grp)
-            if not np.isnan(ic_val):
-                ic_list.append(ic_val)
+
+        if len(codes) == 1 and codes[0] is not None:
+            # 单标的：滚动窗口
+            window_size = 60   # 60 日窗口
+            step_size = 5      # 5 日步长
+            f_single = df[df["code"] == codes[0]][factor_name]
+            r_single = fwd_ret.loc[f_single.index]
+            for start in range(0, len(f_single) - window_size + 1, step_size):
+                end = start + window_size
+                f_win = f_single.iloc[start:end]
+                r_win = r_single.iloc[start:end]
+                ic_val = calculate_ic(f_win, r_win)
+                if not np.isnan(ic_val):
+                    ic_list.append(ic_val)
+        else:
+            # 多标的：每 group 算 1 个横截面 IC
+            for _, grp in df.groupby("code"):
+                f_grp = f.loc[grp.index]
+                r_grp = fwd_ret.loc[grp.index]
+                ic_val = calculate_ic(f_grp, r_grp)
+                if not np.isnan(ic_val):
+                    ic_list.append(ic_val)
         return ic_list
 
     def to_dataframe(self, results: list[ICResult]) -> pd.DataFrame:

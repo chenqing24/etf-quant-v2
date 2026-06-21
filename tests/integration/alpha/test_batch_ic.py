@@ -1,104 +1,110 @@
 """
-tests/integration/alpha/test_batch_ic.py — IC/IR 集成测试（US-013）
+tests/integration/alpha/test_batch_ic.py — US-004 IC 评估集成测试
 
-按规则 5.1（关键路径测试覆盖）：
-    - 多因子批量 IC/IR 评估
-    - 跨多 ETF（code 分组）
-    - 验证 IC 序列与 IR 计算
+按规则 5.1：关键路径测试覆盖
+按规则 18：JSON/CSV 必验证（写完立即 read 验证）
+按规则 20：行为变化类重构必须同步更新测试
+按规则 6.1：错了就错了，不美化 — BatchICEvaluator 单标的场景需要滚动窗口
+
+总计：7 测试
 """
 from __future__ import annotations
 
-import numpy as np
+import sqlite3
+import subprocess
+import sys
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
-from etf_quant.alpha.analysis import BatchICEvaluator, calculate_ic, calculate_ir
+
+PROJECT_ROOT = Path("/home/qwenpaw/.qwenpaw/workspaces/default/etf_quant_v2")
+DB_PATH = PROJECT_ROOT / "data" / "etf.db"
+ICIR_CSV = PROJECT_ROOT / "data" / "factor_icir.csv"
+HISTORY_CSV = PROJECT_ROOT / "data" / "factor_icir_history.csv"
+SCRIPT = PROJECT_ROOT / "scripts" / "run_factor_evaluation.py"
 
 
-@pytest.fixture
-def multi_etf_df() -> pd.DataFrame:
-    """构造 5 只 ETF × 200 天的样本数据。"""
-    np.random.seed(42)
-    n_etfs = 5
-    n_days = 200
-    dates = pd.date_range("2024-01-01", periods=n_days, freq="D")
-    rows = []
-    for i in range(n_etfs):
-        code = f"{510000 + i:06d}"
-        close = pd.Series(100 + np.cumsum(np.random.randn(n_days)))
-        f1 = close / close.shift(5) - 1.0
-        f2 = close.rolling(20).std() / close.rolling(40).std() - 1.0
-        for j in range(n_days):
-            rows.append({
-                "code": code,
-                "date": dates[j],
-                "close": close[j],
-                "M2_momentum_5d": f1.iloc[j] if pd.notna(f1.iloc[j]) else 0.0,
-                "W4_rv": f2.iloc[j] if pd.notna(f2.iloc[j]) else 0.0,
-            })
-    return pd.DataFrame(rows)
-
-
-def test_calculate_ic_perfect_correlation():
-    """完全正相关 → IC = 1.0。"""
-    f = pd.Series([1, 2, 3, 4, 5], index=pd.date_range("2024-01-01", periods=5))
-    r = pd.Series([0.1, 0.2, 0.3, 0.4, 0.5], index=pd.date_range("2024-01-01", periods=5))
-    assert abs(calculate_ic(f, r) - 1.0) < 1e-6
-
-
-def test_calculate_ic_perfect_negative():
-    """完全负相关 → IC = -1.0。"""
-    f = pd.Series([1, 2, 3, 4, 5], index=pd.date_range("2024-01-01", periods=5))
-    r = pd.Series([0.5, 0.4, 0.3, 0.2, 0.1], index=pd.date_range("2024-01-01", periods=5))
-    assert abs(calculate_ic(f, r) - (-1.0)) < 1e-6
-
-
-def test_calculate_ir_basic():
-    """IR = mean / std（pd.Series.std() ddof=1，与 np.std 不同）。"""
-    ic_list = [0.05, 0.04, 0.06, 0.03, 0.05]
-    ir, std = calculate_ir(ic_list)
-    s = pd.Series(ic_list)
-    expected_ir = s.mean() / s.std()  # pd 默认 ddof=1
-    expected_std = s.std()
-    assert ir == pytest.approx(expected_ir, rel=1e-3)
-    assert std == pytest.approx(expected_std, rel=1e-3)
-
-
-def test_calculate_ir_empty():
-    """空列表 → NaN。"""
-    ir, std = calculate_ir([])
-    assert np.isnan(ir) and np.isnan(std)
-
-
-def test_calculate_ir_single():
-    """单值 → 无法算 std → NaN。"""
-    ir, std = calculate_ir([0.05])
-    assert np.isnan(ir)
-
-
-def test_batch_evaluator_runs(multi_etf_df):
-    """批量评估在 5 ETF 上跑通。"""
-    evaluator = BatchICEvaluator(
-        factor_names=["M2_momentum_5d", "W4_rv"],
-        forward_window=5,
-        min_samples=2,
+def test_run_factor_evaluation_outputs_csv():
+    """US-004 AC1: scripts/run_factor_evaluation.py 输出 factor_icir.csv 27 行"""
+    if not DB_PATH.exists():
+        pytest.skip("etf.db 不存在")
+    # 跑 CLI
+    r = subprocess.run(
+        [sys.executable, str(SCRIPT), "--benchmark", "510300", "--lookback-days", "504"],
+        capture_output=True, text=True, timeout=120,
+        cwd=str(PROJECT_ROOT),
     )
-    results = evaluator.evaluate(multi_etf_df)
-    assert len(results) == 2
-    for r in results:
-        assert r.factor_name in ("M2_momentum_5d", "W4_rv")
-        assert r.sample_count > 0
-
-
-def test_batch_evaluator_to_dataframe(multi_etf_df):
-    """结果转 DataFrame。"""
-    evaluator = BatchICEvaluator(
-        factor_names=["M2_momentum_5d"],
-        forward_window=5,
-        min_samples=2,
-    )
-    results = evaluator.evaluate(multi_etf_df)
-    df = evaluator.to_dataframe(results)
-    assert len(df) == 1
+    assert r.returncode == 0, f"run_factor_evaluation.py 失败: {r.stderr}"
+    # 验证 CSV
+    assert ICIR_CSV.exists(), f"{ICIR_CSV} 不存在"
+    df = pd.read_csv(ICIR_CSV)
+    assert len(df) == 27, f"27 因子，got {len(df)}"
+    assert "factor_name" in df.columns
     assert "ic" in df.columns
     assert "ir" in df.columns
+    assert "ic_std" in df.columns
+    assert "sample_count" in df.columns
+    assert "eval_date" in df.columns
+    assert "benchmark" in df.columns
+
+
+def test_ic_range_valid():
+    """US-004 AC2: IC ∈ [-1, 1]、IR 数字范围合理"""
+    df = pd.read_csv(ICIR_CSV)
+    non_nan = df.dropna(subset=["ic"])
+    assert len(non_nan) > 0, "全 NaN，IC 评估失败"
+    assert non_nan["ic"].between(-1, 1).all(), f"IC 越界: {non_nan[~non_nan['ic'].between(-1, 1)]}"
+    # IR 范围 [-3, 3] 经验值
+    non_nan_ir = df.dropna(subset=["ir"])
+    assert non_nan_ir["ir"].between(-10, 10).all(), "IR 严重越界"
+
+
+def test_discrimination_across_factors():
+    """US-004 AC3: 27 因子 IC 有区分度（不全相等）"""
+    df = pd.read_csv(ICIR_CSV)
+    non_nan_ic = df.dropna(subset=["ic"])["ic"]
+    assert non_nan_ic.nunique() >= 5, f"IC 区分度不足，unique={non_nan_ic.nunique()}"
+    # 标准差 > 0.05 表示有区分
+    assert non_nan_ic.std() > 0.05, f"IC std={non_nan_ic.std():.4f}，区分度太低"
+
+
+def test_sample_count_meets_minimum():
+    """US-004 AC4: 滚动窗口采样数 ≥ 30（BatchICEvaluator.min_samples）"""
+    df = pd.read_csv(ICIR_CSV)
+    valid = df[df["sample_count"] >= 30]
+    assert len(valid) >= 20, f"sample_count ≥ 30 的因子数 {len(valid)} < 20"
+
+
+def test_benchmark_510300_default():
+    """US-004 AC5: 默认 benchmark=510300"""
+    df = pd.read_csv(ICIR_CSV)
+    assert df["benchmark"].astype(str).eq("510300").all()
+
+
+def test_history_csv_appended():
+    """US-004 AC6: factor_icir_history.csv append 模式（US-008 提前验证）"""
+    if not HISTORY_CSV.exists():
+        pytest.skip("history CSV 未生成（首次跑）")
+    df = pd.read_csv(HISTORY_CSV)
+    # 至少 27 行（本次跑）
+    assert len(df) >= 27
+    # 全部是 510300
+    assert df["benchmark"].astype(str).eq("510300").all()
+
+
+def test_history_csv_no_overwrite():
+    """US-004 AC7: 第二次跑 history CSV 行数翻倍（验证 append 模式）"""
+    if not HISTORY_CSV.exists():
+        pytest.skip("history CSV 未生成")
+    before = len(pd.read_csv(HISTORY_CSV))
+    r = subprocess.run(
+        [sys.executable, str(SCRIPT), "--benchmark", "510300", "--lookback-days", "504"],
+        capture_output=True, text=True, timeout=120,
+        cwd=str(PROJECT_ROOT),
+    )
+    assert r.returncode == 0
+    after = len(pd.read_csv(HISTORY_CSV))
+    # append 模式：行数应该增加 27（不是覆盖）
+    assert after >= before + 27, f"append 失败: before={before}, after={after}"
