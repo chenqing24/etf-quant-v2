@@ -9,9 +9,9 @@ description: |
   - QwenPaw cron（暂未配置）
 
   执行方式：
-    python skills/quantor-onboard/scripts/run_onboard.py [action] [--confirm]
+    python skills/quantor-onboard/scripts/run_onboard.py onboard [--block X] [--confirm]  # L274：原 [action] 占位符跑不通，已改
   参数：
-    action: onboard | status | reset | skip | back
+    onboard | status | reset | skip | back
     --confirm: 确认完成当前块并推进到下一块（US-005）
     --block {universe,alpha,risk}: 指定块（skip/back 用）
 

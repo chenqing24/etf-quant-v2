@@ -46,6 +46,7 @@ from etf_quant.alpha.factors.inherited import (
     W3VolatilityFactor,
 )
 from etf_quant.alpha.factors.t1_macd import T1MACDbarFactor
+from etf_quant.alpha.factors.t5_ma5 import T5MA5Factor  # 散户新加（2026-06-21 Sprint-7 后补）
 from etf_quant.alpha.factors.v1_volume import V1VolumeFactor
 from etf_quant.alpha.factors.w4_rv import W4RVFactor
 
@@ -56,6 +57,7 @@ FACTOR_REGISTRY: dict[str, type[Factor]] = {
     "T2_ma_bull": T2MABullFactor,
     "T3_sar_trend": T3SARTrendFactor,
     "T4_adx_trend": T4ADXTrendFactor,
+    "T5_ma5": T5MA5Factor,  # 散户新加（2026-06-21）
     # 动量类 (6)
     "M1_momentum_3d": M1Momentum3dFactor,
     "M2_momentum_5d": M2Momentum5dFactor,
@@ -92,7 +94,7 @@ FACTOR_REGISTRY: dict[str, type[Factor]] = {
 ALL_FACTORS: list[type[Factor]] = list(FACTOR_REGISTRY.values())
 
 # 验证：必须是 27 个
-assert len(ALL_FACTORS) == 27, f"Expected 27 factors, got {len(ALL_FACTORS)}: {[f.__name__ for f in ALL_FACTORS]}"
+assert len(ALL_FACTORS) == 28, f"Expected 28 factors (27 仓内 + 1 散户新加 MA5), got {len(ALL_FACTORS)}: {[f.__name__ for f in ALL_FACTORS]}"
 
 
 def get_factor(name: str) -> Factor:
