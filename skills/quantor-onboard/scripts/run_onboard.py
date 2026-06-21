@@ -28,6 +28,7 @@ def load_state() -> dict:
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {
+        "schema_version": 1,
         "current_block": "universe",
         "completed_blocks": [],
         "skipped_blocks": [],

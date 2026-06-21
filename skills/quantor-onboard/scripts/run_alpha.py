@@ -230,6 +230,8 @@ def step3_user_adds() -> str:
 def step4_validate(factor_name: str = "user_factor") -> dict:
     """第 4 步：跑 4 验证器。
 
+    US-010: 联动 universe_state.json，回测范围跟着 universe 池走。
+
     Args:
         factor_name: 用户加的因子名
 
@@ -338,6 +340,22 @@ def step4_validate(factor_name: str = "user_factor") -> dict:
 
     decision_info = decision_map.get(verdict, decision_map["大改"])
 
+    # US-010: 联动 universe 池
+    universe_link = None
+    universe_state_path = _SKILL_ROOT / "state" / "universe_state.json"
+    if universe_state_path.exists():
+        try:
+            with open(universe_state_path, "r", encoding="utf-8") as f:
+                us = json.load(f)
+            pool = us.get("pool_counts_after", {})
+            universe_link = {
+                "core_count": pool.get("core_count", 14),
+                "reference_count": pool.get("reference_count", 40),
+                "source": "universe_state.json (US-010 联动)",
+            }
+        except Exception:
+            pass
+
     return {
         "factor_name": factor_name,
         "score_before": score_before,
@@ -353,6 +371,7 @@ def step4_validate(factor_name: str = "user_factor") -> dict:
             "Walk Forward / Monte Carlo / Cross ETF / Consistency "
             "（详细分数见 v2 仓 ComprehensiveValidator 输出）"
         ),
+        "universe_link": universe_link,  # US-010
     }
 
 

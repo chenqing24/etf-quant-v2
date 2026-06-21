@@ -117,17 +117,46 @@ def step1_what_is_discipline() -> str:
 
 def step2_v2_default() -> dict:
     """第 2 步：v2 默认纪律 + 22 字段中 5 个关键。"""
+    # US-010: 联动 universe 池（如果 universe_state.json 存在）
+    universe_link = None
+    universe_state_path = _SKILL_ROOT / "state" / "universe_state.json"
+    if universe_state_path.exists():
+        try:
+            with open(universe_state_path, "r", encoding="utf-8") as f:
+                us = json.load(f)
+            pool = us.get("pool_counts_after", {})
+            universe_link = {
+                "core_count": pool.get("core_count", 14),
+                "reference_count": pool.get("reference_count", 40),
+                "source": "universe_state.json (US-010 联动)",
+            }
+        except Exception:
+            pass
+    if universe_link is None:
+        universe_link = {"core_count": 14, "reference_count": 40, "source": "v2 default"}
+
+    # 联动建议：如果 universe 核心池 > max_holdings，提示用户放大
+    max_holdings_default = 2
+    hint_warnings = []
+    if universe_link["core_count"] > max_holdings_default * 2:
+        hint_warnings.append(
+            f"提示：universe 核心池 {universe_link['core_count']} 只 > max_holdings={max_holdings_default}×2，"
+            f"建议 max_holdings 调到 {universe_link['core_count'] // 2 + 1}"
+        )
+
     return {
         "v2_default_rules": {
             "stop_loss_pct": 0.10,
             "take_profit_pct": 0.20,
             "min_hold_days": 5,
             "max_hold_days": 99999,
-            "max_holdings": 2,
+            "max_holdings": max_holdings_default,
             "max_position_pct": 0.50,
         },
         "key_fields": POSITION_GUIDE_KEY_FIELDS,
         "logic_order": POSITION_LOGIC_ORDER,
+        "universe_link": universe_link,  # US-010
+        "hint_warnings": hint_warnings,
         "hint": (
             "【第 2 步：v2 默认纪律】\n\n"
             "v2 默认 6 个关键字段：\n"
@@ -136,7 +165,9 @@ def step2_v2_default() -> dict:
             "• 最大持仓 2 只\n"
             "• 单只最大 50%\n"
             "• 最大持仓天数 99999（v1 教训：永远满仓）\n\n"
-            "仓位逻辑顺序（规则 17）：止损 → 止盈 → 到期 → HOLD"
+            "仓位逻辑顺序（规则 17）：止损 → 止盈 → 到期 → HOLD\n\n"
+            f"（联动：universe 核心池 {universe_link['core_count']} 只 + 参考 {universe_link['reference_count']} 只）"
+            + ("\n" + "\n".join(hint_warnings) if hint_warnings else "")
         ),
     }
 
