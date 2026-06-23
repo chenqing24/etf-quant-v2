@@ -13,9 +13,11 @@
 |------|-----:|
 | Sprint | 0/1/2/3/4/5/6/7 全完成 |
 | US（业务实现）| **29/29 = 100%** |
-| 测试 | 217/217 全过 + 5 benchmark |
+| 单元测试 | **162/162 全过**（17 文件，按 L296 教训修复后，2026-06-23）|
 | 8 维自检 | 100/100 |
-| Tag | `v2.0-final` + `sprint-7-complete` + `v1-deprecated-v2-refactor`（v1 归档） |
+| Tag | `v2.0-final` + `sprint-7-complete` + `v1-deprecated-v2-refactor`（v1 归档）|
+
+> **测试覆盖说明（L296 教训）**：所有 onboard 校验测试已重构为 fixture 隔离（不依赖生产 state.json / etf.db），新会话/新用户必过。合并跑 pytest 仍卡死（Theme 5 待修，单文件全过）。
 
 ## 触发词与 SKILL 路由
 

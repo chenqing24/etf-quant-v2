@@ -23,7 +23,7 @@ from etf_quant.data_layer.decision_snapshot_repo import (
 )
 from etf_quant.risk.position_guide import PositionGuideAnalyzer
 from etf_quant.universe import ETFListLoader
-from etf_quant.monitor import DataHealthMonitor
+from etf_quant.monitor import DataHealthMonitor, MarketModeDetector
 
 
 def run_daily(db_path: str) -> dict:
@@ -41,10 +41,13 @@ def run_daily(db_path: str) -> dict:
     position_repo = PositionRepository(db_path=db_path)
     snapshot_repo = DecisionSnapshotRepository(db_path=db_path)
 
-    # 3. 评估持仓（PositionGuide）
+    # 3. 评估持仓（PositionGuide，先用 market_mode 检测器拿到真实 regime）
+    market_report = MarketModeDetector(db_path=db_path).detect()
+    market_mode = market_report.mode  # L297 教训：基于外部数据判断，不用硬编码
+
     analyzer = PositionGuideAnalyzer(db_path=db_path)
     holdings_guide = analyzer.analyze_all(
-        current_prices={}, market_regime="range_bound",
+        current_prices={}, market_regime=market_mode,
     )
 
     # 4. 数据健康检查
@@ -56,9 +59,14 @@ def run_daily(db_path: str) -> dict:
     universe = ETFListLoader()
     core_codes = [e.code for e in universe.get_core_pool()]
 
-    # 6. 决策（v2 简化：基于 holdings_count）
-    market_mode = "range_bound"  # TODO: 接入 market_mode 检测
-    if len(holdings_guide) == 0:
+    # 6. 决策（v2 简化：基于 holdings_count + market_mode）
+    # L297 教训：market_mode 真实检测，crash 强制空仓，range_bound 只持有不买入
+    if market_mode == "crash":
+        decision = "SELL"
+        buy_candidates = []
+        sell_candidates = [{"code": h.code if hasattr(h, 'code') else str(h),
+                            "reason": f"崩盘市（{market_report.reason}），清仓避险"} for h in holdings_guide[:10]]
+    elif len(holdings_guide) == 0:
         decision = "BUY"
         buy_candidates = [{"code": c, "score": 0.5} for c in core_codes[:5]]
         sell_candidates = []
@@ -67,7 +75,13 @@ def run_daily(db_path: str) -> dict:
         buy_candidates = []
         sell_candidates = [{"code": h.code if hasattr(h, 'code') else str(h),
                             "reason": "持仓超过 5 只"} for h in holdings_guide[:3]]
+    elif market_mode == "range_bound":
+        # 震荡市：只持有不买入（避免被套）
+        decision = "HOLD"
+        buy_candidates = []
+        sell_candidates = []
     else:
+        # trend_up / trend_down：持有 + 趋势跟随
         decision = "HOLD"
         buy_candidates = []
         sell_candidates = []

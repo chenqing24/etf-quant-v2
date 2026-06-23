@@ -68,8 +68,13 @@ def run_block(block_name: str, state: dict) -> dict:
         return {"error": f"执行 {block_name} 失败: {e}"}
 
 
-def validate_block_completion(block: str) -> dict:
+def validate_block_completion(block: str, state_dir: Path | None = None) -> dict:
     """L272：校验块的真实业务完成度（不只校验 step 文案）。
+
+    Args:
+        block: 块名（universe/alpha/risk）
+        state_dir: state 目录路径（默认 _SKILL_ROOT/state，测试时可注入 tmp_path）
+                   按 L296 教训：测试不依赖生产 state，避免脏数据
 
     Returns:
         {"passed": bool, "block": str, "checks": list, "missing": list}
@@ -81,6 +86,7 @@ def validate_block_completion(block: str) -> dict:
     """
     checks = []
     missing = []
+    state_dir = state_dir or (_SKILL_ROOT / "state")
 
     if block == "universe":
         # 校验：14 只核心池都在
@@ -101,7 +107,7 @@ def validate_block_completion(block: str) -> dict:
 
     elif block == "alpha":
         # 校验：user_factors 列表非空
-        alpha_state_path = _SKILL_ROOT / "state" / "alpha_state.json"
+        alpha_state_path = state_dir / "alpha_state.json"
         if not alpha_state_path.exists():
             missing.append(f"alpha_state.json 不存在")
         else:
@@ -112,7 +118,7 @@ def validate_block_completion(block: str) -> dict:
                 missing.append("user_factors 列表为空（散户没选因子）")
             else:
                 # 校验：因子在 FACTOR_REGISTRY 里
-                sys.path.insert(0, str(_REPO_ROOT / "etf_quant_v2" / "src"))
+                sys.path.insert(0, str(_REPO_ROOT / "src"))
                 try:
                     from etf_quant.alpha.registry import FACTOR_REGISTRY
                     not_in_registry = [f for f in user_factors if f not in FACTOR_REGISTRY]
@@ -128,7 +134,7 @@ def validate_block_completion(block: str) -> dict:
 
     elif block == "risk":
         # 校验：risk_config.json 有 stop_loss / stop_profit / max_position_pct
-        risk_config_path = _SKILL_ROOT / "state" / "risk_config.json"
+        risk_config_path = state_dir / "risk_config.json"
         if not risk_config_path.exists():
             missing.append(f"risk_config.json 不存在")
         else:
