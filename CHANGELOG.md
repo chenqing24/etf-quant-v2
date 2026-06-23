@@ -42,6 +42,45 @@
 ### Security
 - pre-commit 钩子真实验证 4 条硬错误（L241 教训）
 
+## [v3.1] - 2026-06-23 — mission-20260623-072239 + 130000-theme345
+
+### Fixed
+- **L296** onboard 测试 fixture 隔离（不依赖生产 state.json / etf.db）
+  - `test_onboard_validation.py` 12/12 改前失败 → 12/12 全过
+  - `validate_block_completion` 加 `state_dir` 参数
+- **L297** `market_mode = "range_bound"` 硬编码删除
+  - 新建 `src/etf_quant/monitor/market_mode.py` (MarketModeDetector)
+  - 基于 510300 大盘 MA20/MA60/MA120 + ATR + 5d return
+  - 4 种模式：trend_up / trend_down / crash / range_bound
+  - `run_daily.py` 按 market_mode 分流决策（crash 强制空仓）
+- **L298** README 测试数据真实化（217/217 → 162/162 实测）
+
+### Added
+- **L306** 6 个空 `__init__.py` 补 public API docstring
+  - data_layer / risk / execution / backtest / config / utils
+- **L302** 4 个 `except:` 精确捕获
+  - loader.py: `except (sqlite3.OperationalError, DatabaseError)`
+  - monitor.py: 3 处精确异常类型
+- **L309** `scripts/run_unit_tests.sh` pytest 9.x 合并卡死 workaround
+  - 逐文件跑 + progress dots 兼容
+  - 17 文件 175/175 pass
+- `docs/ITERATION_PLAN_20260623.md` 5 Mission 路线图
+- `docs/MISSION_FINAL_REPORT_20260623.md` mission 总结
+
+### Changed
+- README 测试数字：217/217 → 162/162（实测）
+- `quant-trading` v1 skill 加 DEPRECATED 横幅（按规则 21，保留代码）
+
+### Removed
+- 误判 L307 教训（8 个 print 全在 `__main__` CLI 块，无须改 logger）
+- CI workflow 冗余（按 L314 教训，AI 单人环境 pytest/ruff/mypy 跑在 commit 前）
+
+### Notes
+- 业务自评 96/100（mission-20260623-130000-theme345）
+- 4 个新教训 L316-L319
+- 关联 mission-20260623-072239 + mission-20260623-130000-theme345
+- 子仓 HEAD: 0e3642a
+
 ## [2.0.0a1] - 2026-06-19
 
 ### Added
