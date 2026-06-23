@@ -41,7 +41,8 @@ class ETFNameLoader:
                 name = row[0] or code
             else:
                 name = code
-        except:
+        except (sqlite3.OperationalError, sqlite3.DatabaseError):
+            # L302 教训：精确捕获 SQLite 异常，不吞所有错误
             name = code
         finally:
             conn.close()

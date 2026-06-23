@@ -151,7 +151,8 @@ class DataQualityMonitor:
                 try:
                     last_update = datetime.fromisoformat(last_update_str)
                     delay_minutes = (now - last_update).total_seconds() / 60
-                except:
+                except (ValueError, TypeError):
+                    # L302 教训：精确捕获日期解析错误，不吞所有错误
                     delay_minutes = None
             else:
                 delay_minutes = None
@@ -239,7 +240,8 @@ class DataQualityMonitor:
             try:
                 from src.config.etf_pools import ETF_POOLS
                 expected_etfs = len(ETF_POOLS.get('core', [])) + len(ETF_POOLS.get('extended', []))
-            except:
+            except (ImportError, AttributeError, KeyError):
+                # L302 教训：精确捕获配置加载错误，不吞所有错误
                 expected_etfs = total_etfs
             
             missing_count = max(0, expected_etfs - len(etf_counts))
@@ -384,7 +386,8 @@ class DataQualityMonitor:
                 try:
                     cur = conn.execute(f'SELECT COUNT(*) FROM {table}')
                     table_stats[table] = cur.fetchone()[0]
-                except:
+                except (sqlite3.OperationalError, sqlite3.DatabaseError):
+                    # L302 教训：精确捕获 SQLite 异常，不吞所有错误
                     table_stats[table] = 0
             
             # 检查索引
