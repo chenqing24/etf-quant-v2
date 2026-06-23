@@ -39,3 +39,6 @@ Thumbs.db
 
 # 备份
 .archive/
+
+# 测试产物（scripts/run_unit_tests.sh 生成）
+reports/pytest/*.log
