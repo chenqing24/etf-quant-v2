@@ -39,8 +39,18 @@ from etf_quant.universe import ETFListLoader
 
 
 def get_core_codes() -> list[str]:
-    """通过 ETFListLoader 读 core 池（按规则 15：业务代码禁止直接 DB 连接）"""
-    loader = ETFListLoader(db_path=str(PROJECT_ROOT / 'data' / 'etf.db'))
+    """通过 ETFListLoader 读 core 池。
+
+    按 L321 教训修复 P0-2：
+    - ETFListLoader.__init__() 不接受 db_path（它从 configs/etf_list.json 读，与 db 无关）
+    - single 模式传 --code 走 RealBacktestEngine.run(db_path=...) 处理 db 连接
+    - all 模式仅需 ETF 代码列表，db 连接在 run_single 内部按需打开
+
+    业界参考：
+    - Hitchhiker's Guide to Python：依赖注入明确，签名严格
+    - Google Python Style Guide：函数签名只暴露必需参数
+    """
+    loader = ETFListLoader()  # 不传 db_path（修复 P0-2 回归）
     return [e.code for e in loader.get_core_pool()]
 
 
