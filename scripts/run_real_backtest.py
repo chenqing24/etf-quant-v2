@@ -74,16 +74,55 @@ def main():
     parser = argparse.ArgumentParser(description='v2 真实回测（Backtesting.py）')
     sub = parser.add_subparsers(dest='cmd', required=True)
 
-    p_single = sub.add_parser('single', help='单只 ETF 回测')
+    p_single = sub.add_parser('single', help='单只 ETF 回测（单段 in-sample）')
     p_single.add_argument('code', help='ETF 代码（如 512170）')
     p_single.add_argument('--factors', nargs='+', default=None, help='因子名列表')
 
-    sub.add_parser('all', help='全部 core 池 ETF 回测')
+    p_wf = sub.add_parser('walk_forward', help='单只 ETF walk-forward 滚动验证（防过拟合）')
+    p_wf.add_argument('code', help='ETF 代码（如 512170）')
+    p_wf.add_argument('--train-months', type=int, default=6, help='训练窗口月数（默认 6）')
+    p_wf.add_argument('--test-months', type=int, default=3, help='测试窗口月数（默认 3）')
+    p_wf.add_argument('--step-months', type=int, default=3, help='步进月数（默认 3 = 50%% 重叠）')
+
+    sub.add_parser('all', help='全部 core 池 ETF 回测（单段 in-sample）')
 
     args = parser.parse_args()
 
     if args.cmd == 'single':
         result = run_single(args.code, args.factors)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+
+    elif args.cmd == 'walk_forward':
+        from etf_quant.backtest.walk_forward_adapter import WalkForwardEngine
+        engine = WalkForwardEngine(
+            train_months=args.train_months,
+            test_months=args.test_months,
+            step_months=args.step_months,
+        )
+        r = engine.run(code=args.code, db_path=PROJECT_ROOT / 'data' / 'etf.db')
+        result = {
+            'code': r.code,
+            'n_windows': r.n_windows,
+            'oos_return': r.oos_return,
+            'oos_sharpe': r.oos_sharpe,
+            'oos_max_drawdown': r.oos_max_drawdown,
+            'oos_win_rate': r.oos_win_rate,
+            'oos_n_trades': r.oos_n_trades,
+            'config': r.config,
+            'warnings': r.warnings,
+            'windows': [
+                {
+                    'window_id': w.window_id,
+                    'train_start': w.train_start,
+                    'train_end': w.train_end,
+                    'test_start': w.test_start,
+                    'test_end': w.test_end,
+                    'test_return': w.test_return,
+                    'sharpe': w.sharpe,
+                }
+                for w in r.windows
+            ],
+        }
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
     elif args.cmd == 'all':
