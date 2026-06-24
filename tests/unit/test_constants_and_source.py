@@ -39,10 +39,11 @@ class TestConstants:
         # v1 6/2 monitor 修复后 min_day_count 动态化，默认兜底 10
         assert constants.DEFAULT_MIN_DAY_COUNT == 10
 
-    def test_default_max_delay_minutes_80(self):
+    def test_default_max_delay_minutes_1500(self):
         from etf_quant.config import constants
-        # v1 分钟级监控 80 分钟阈值
-        assert constants.DEFAULT_MAX_DELAY_MINUTES == 80
+        # 25h（1500 分钟）：A 股收盘 15:00 后数据停更到次日 9:30，间隔 18.5h
+        # 80→1500 修改记录：B3 修复（2026-06-24 daily 跑通验证）
+        assert constants.DEFAULT_MAX_DELAY_MINUTES == 1500
 
     def test_alert_cooldown_1h(self):
         from etf_quant.config import constants
@@ -120,3 +121,52 @@ class TestExecutionSource:
             else:
                 os.environ.pop("ETF_QUANT_SOURCE", None)
             clear()
+
+
+class TestResolveDbPath:
+    """L321 教训：resolve_db_path 兜底 cwd 漂移 + ETF_QUANT_DB_PATH 覆盖。"""
+
+    def setup_method(self):
+        self._env_backup = os.environ.pop("ETF_QUANT_DB_PATH", None)
+
+    def teardown_method(self):
+        if self._env_backup is not None:
+            os.environ["ETF_QUANT_DB_PATH"] = self._env_backup
+        else:
+            os.environ.pop("ETF_QUANT_DB_PATH", None)
+
+    def test_no_override_uses_default(self):
+        """无 override + 无环境变量 → 用 constants.DB_PATH（绝对路径）"""
+        from etf_quant.config.constants import resolve_db_path
+        result = resolve_db_path()
+        assert os.path.isabs(result)
+        assert result.endswith("etf.db")
+
+    def test_env_var_takes_priority(self):
+        """环境变量 ETF_QUANT_DB_PATH 优先级高于默认"""
+        from etf_quant.config.constants import resolve_db_path
+        os.environ["ETF_QUANT_DB_PATH"] = "/tmp/test_env_etf.db"
+        result = resolve_db_path()
+        assert result == "/tmp/test_env_etf.db"
+
+    def test_explicit_override_takes_priority(self):
+        """explicit override 优先级最高"""
+        from etf_quant.config.constants import resolve_db_path
+        os.environ["ETF_QUANT_DB_PATH"] = "/tmp/env_etf.db"
+        result = resolve_db_path(override="/tmp/override_etf.db")
+        assert result == "/tmp/override_etf.db"
+
+    def test_relative_override_falls_back_to_project_root(self):
+        """L321 教训核心：相对路径 override 兜底到项目根"""
+        from etf_quant.config.constants import resolve_db_path
+        # data/etf.db 在项目根存在
+        result = resolve_db_path(override="data/etf.db")
+        # 应该是绝对路径（项目根的 etf.db）
+        assert os.path.isabs(result), f"应该是绝对路径，实际: {result}"
+        assert result.endswith("etf.db")
+
+    def test_nonexistent_relative_returns_resolved_path(self):
+        """不存在的相对路径仍返回解析后的路径（让调用方报错）"""
+        from etf_quant.config.constants import resolve_db_path
+        result = resolve_db_path(override="data/nonexistent_xyz.db")
+        assert os.path.isabs(result)

@@ -156,12 +156,10 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # 数据库路径
-    import os
-    db_path = args.db_path or os.environ.get("ETF_QUANT_DB_PATH")
-    if db_path is None:
-        from etf_quant.config import constants
-        db_path = constants.DB_PATH
+    # 数据库路径（按 L321 教训：使用 resolve_db_path 兜底 cwd 漂移）
+    from etf_quant.config.constants import resolve_db_path
+    db_path = resolve_db_path(args.db_path)
+    print(f"[etf-daily] db_path = {db_path}", file=sys.stderr)  # 启动时打印便于 debug
 
     if args.mode == "daily":
         result = run_daily(db_path=db_path)
