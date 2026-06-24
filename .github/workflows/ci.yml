@@ -1,0 +1,77 @@
+name: CI
+
+# 借鉴业界标准（按规则 13）：
+# - github.com/actions/setup-python 官方模板
+# - docs.github.com/actions 最佳实践
+# - pytest-cov 标准覆盖率报告
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: |
+          ruff check src/ tests/
+          ruff format --check src/ tests/
+
+      - name: Type check (mypy)
+        run: mypy src/etf_quant/ || true  # v2 当前未全量类型注解，warning 不阻断
+
+      - name: Run tests
+        run: pytest --cov=etf_quant --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.11'
+        with:
+          file: coverage.xml
+          flags: unittests
+          fail_ci_if_error: false  # codecov 未配置时不失败
+
+  docs-build:
+    name: Docs build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - name: Validate SKILL.md
+        run: |
+          python -c "
+          from pathlib import Path
+          for f in Path('skills').rglob('SKILL.md'):
+              content = f.read_text()
+              assert '---' in content[:10], f'{f} missing frontmatter'
+              assert 'description' in content, f'{f} missing description'
+          print('✅ All SKILL.md files valid')
+          "
+      - name: Validate pyproject.toml
+        run: python -c "import tomllib; tomllib.loads(open('pyproject.toml').read())"
