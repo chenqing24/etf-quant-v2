@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from etf_quant.data_layer.loader import DataLoader
-from etf_quant.config.constants import DATA_DIR, DB_NAME
+from etf_quant.config.constants import DATA_DIR, DB_NAME, DEFAULT_MAX_DELAY_MINUTES
 
 
 @dataclass
@@ -31,7 +31,7 @@ class DataHealthMonitor:
     def __init__(
         self,
         loader: Optional[DataLoader] = None,
-        threshold_minutes: int = 80,  # L62 教训：动态化
+        threshold_minutes: int = DEFAULT_MAX_DELAY_MINUTES,  # 默认 1500 分钟（25h，覆盖非交易时段）
         min_day_count: int = 100,  # L62 教训：动态化
     ):
         if loader is None:
