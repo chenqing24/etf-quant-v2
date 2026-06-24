@@ -59,8 +59,26 @@ def run_daily(db_path: str) -> dict:
     universe = ETFListLoader()
     core_codes = [e.code for e in universe.get_core_pool()]
 
-    # 6. 决策（v2 简化：基于 holdings_count + market_mode）
+    # 5.5 L321 教训 P1-1：持仓 Sharpe 排名（核心池 vs 持仓）
+    # 仅在持仓非空时跑（避免空仓白耗 30s）
+    holding_ranks = None
+    rank_warning = None
+    if holdings_guide:
+        try:
+            from etf_quant.rank.holding_ranker import (
+                rank_holdings_by_sharpe, is_holding_in_bottom,
+            )
+            holding_codes = [h.code for h in holdings_guide]
+            # 核心池全集 + 持仓（即使持仓不在 core 池也排名）
+            all_codes = list(set(core_codes + holding_codes))
+            holding_ranks = rank_holdings_by_sharpe(db_path=db_path, codes=all_codes)
+        except Exception as e:
+            rank_warning = f"持仓排名失败: {type(e).__name__}: {str(e)[:100]}"
+            warnings.append(rank_warning)
+
+    # 6. 决策（v2 简化：基于 holdings_count + market_mode + Sharpe 排名）
     # L297 教训：market_mode 真实检测，crash 强制空仓，range_bound 只持有不买入
+    # L321 教训 P1-1：持仓在 universe 末位 → 触发 SELL 评估（不强制 T+0）
     if market_mode == "crash":
         decision = "SELL"
         buy_candidates = []
@@ -75,16 +93,30 @@ def run_daily(db_path: str) -> dict:
         buy_candidates = []
         sell_candidates = [{"code": h.code if hasattr(h, 'code') else str(h),
                             "reason": "持仓超过 5 只"} for h in holdings_guide[:3]]
-    elif market_mode == "range_bound":
-        # 震荡市：只持有不买入（避免被套）
-        decision = "HOLD"
-        buy_candidates = []
-        sell_candidates = []
     else:
-        # trend_up / trend_down：持有 + 趋势跟随
-        decision = "HOLD"
-        buy_candidates = []
+        # P1-1 修复：检查持仓是否在 universe 末位（后 30%）
         sell_candidates = []
+        if holding_ranks:
+            for h in holdings_guide:
+                if is_holding_in_bottom(h.code, holding_ranks, bottom_ratio=0.3):
+                    r = holding_ranks[h.code]
+                    sell_candidates.append({
+                        "code": h.code,
+                        "reason": f"持仓 Sharpe 末位（rank={r['rank_in_universe']}/{r['universe_size']}，"
+                                  f"sharpe={r['sharpe']:.2f}），建议减仓评估"
+                    })
+        if sell_candidates:
+            # 末位持仓 + 非崩盘 → SELL 评估（不强制，提示风险）
+            decision = "SELL"
+            buy_candidates = []
+        elif market_mode == "range_bound":
+            # 震荡市：只持有不买入（避免被套）
+            decision = "HOLD"
+            buy_candidates = []
+        else:
+            # trend_up / trend_down：持有 + 趋势跟随
+            decision = "HOLD"
+            buy_candidates = []
 
     # 7. 决策快照
     _now = __import__("datetime").datetime.now().isoformat(timespec="seconds")
