@@ -10,15 +10,25 @@ description: |
   - QwenPaw cron 每日 14:30 工作日
 
   执行方式：
+    # 方式 1：直接 python（输出控制台 + 报告文件）
     python skills/etf-daily/scripts/run_daily.py [mode]
+
+    # 方式 2：bash 包装器（输出三份分离日志：decision/stdout/stderr）
+    bash scripts/run_and_log.sh [mode]
+
   参数：
     mode: daily | eval | history（默认 daily）
     --db-path: 数据库路径（默认用 ETF_QUANT_DB_PATH 环境变量或项目根 data/etf.db）
     --report-dir: 报告输出根目录（默认 reports/etf-daily/YYYY-MM-DD/）
+    LOG_DIR: bash 包装器日志目录（默认 reports/etf-daily-logs/YYYY-MM-DD/）
 
   输出：
     - 控制台：JSON 格式决策结果
-    - 文件：reports/etf-daily/YYYY-MM-DD/{mode}_{HHMMSS}.json（L321 教训 P1-2 修复）
+    - 文件 1：reports/etf-daily/YYYY-MM-DD/{mode}_{HHMMSS}.json（L321 教训 P1-2）
+    - 文件 2（bash 包装器）：三份分离日志
+        - decision_{mode}_{HHMMSS}.json（机器读）
+        - stdout_{mode}_{HHMMSS}.log（人读）
+        - stderr_{mode}_{HHMMSS}.log（debug）
     - 钉钉推送（买卖信号 + 警告）
     - 决策快照（decision_snapshot.json 落库）
 
