@@ -119,11 +119,80 @@ def run_daily(db_path: str) -> dict:
 
 
 def run_eval(db_path: str) -> dict:
-    """运行完整评估（多时段回测）。"""
+    """运行完整评估（多时段回测）。
+
+    修复 P0-3（L321 教训）：
+    - 旧实现：只返回 validator.config（占位，SKILL.md 文档与实现不符）
+    - 新实现：调用 RealBacktestEngine 跑全部 core 池 + ComprehensiveValidator 4 验证器
+    - 返回结构：validator_config + real_backtest_results + validation_result + summary
+
+    业界参考：
+    - 12-Factor App § IV Backing Services：eval 是薄包装
+    - Cargo/Go CLI：子命令 = 子功能
+    - Sphinx doc + 实际行为一致（Read the Docs 最佳实践）
+
+    注意：ComprehensiveValidator 需要每个 result 含 etf_code/test_return/sharpe/max_drawdown
+    RealBacktestEngine 输出含 etf_code(start) test_period(start~end) train_period（隐含 full）test_return
+    这里 train_period = test_period = 完整回测（v2 简化：等效 in-sample）
+    """
+    from etf_quant.backtest.backtesting_adapter import RealBacktestEngine
     from etf_quant.backtest.comprehensive_validator import ComprehensiveValidator
+    from etf_quant.universe import ETFListLoader
+
+    # 1. 跑全部 core 池真实回测
+    engine = RealBacktestEngine()
+    codes = [e.code for e in ETFListLoader().get_core_pool()]
+    raw_results = []
+    for i, code in enumerate(codes, 1):
+        try:
+            r = engine.run(code=code, db_path=db_path)
+            raw_results.append({
+                "etf_code": r.code,
+                "train_period": (r.start, r.end),
+                "test_period": (r.start, r.end),
+                "train_return": r.total_return,
+                "test_return": r.total_return,
+                "sharpe": r.sharpe,
+                "max_drawdown": r.max_drawdown,
+                "n_trades": r.n_trades,
+                "win_rate": r.win_rate,
+            })
+        except Exception as e:
+            raw_results.append({"etf_code": code, "error": str(e)})
+
+    # 2. 综合验证
     validator = ComprehensiveValidator()
-    # v2 简化版：占位（实际回测结果由 US-021 注入）
-    return {"validator_config": validator.config}
+    # 过滤掉有 error 的，构造 validator 期望的格式
+    valid = [r for r in raw_results if "error" not in r]
+    validation = validator.validate(valid) if valid else None
+
+    # 3. 汇总
+    if valid:
+        n = len(valid)
+        summary = {
+            "n_etfs_tested": n,
+            "n_etfs_passed": sum(1 for r in valid if r["test_return"] > 0),
+            "avg_return": round(sum(r["test_return"] for r in valid) / n, 2),
+            "avg_sharpe": round(sum(r["sharpe"] for r in valid) / n, 2),
+            "avg_max_drawdown": round(sum(r["max_drawdown"] for r in valid) / n, 2),
+        }
+    else:
+        summary = {"n_etfs_tested": 0, "error": "no valid backtest results"}
+
+    return {
+        "validator_config": validator.config,
+        "real_backtest_results": raw_results,
+        "validation_result": {
+            "composite_score": validation.composite_score if validation else None,
+            "pass": validation.pass_ if validation else False,
+            "confidence": validation.confidence if validation else "UNKNOWN",
+            "walk_forward_score": validation.walk_forward_score if validation else None,
+            "monte_carlo_score": validation.monte_carlo_score if validation else None,
+            "cross_etf_score": validation.cross_etf_score if validation else None,
+            "consistency": validation.consistency if validation else None,
+        } if validation else None,
+        "summary": summary,
+    }
 
 
 def run_history(db_path: str) -> dict:
