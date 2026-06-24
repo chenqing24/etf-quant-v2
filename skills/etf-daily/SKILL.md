@@ -13,11 +13,14 @@ description: |
     python skills/etf-daily/scripts/run_daily.py [mode]
   参数：
     mode: daily | eval | history（默认 daily）
+    --db-path: 数据库路径（默认用 ETF_QUANT_DB_PATH 环境变量或项目根 data/etf.db）
+    --report-dir: 报告输出根目录（默认 reports/etf-daily/YYYY-MM-DD/）
 
   输出：
-    - 决策报告（控制台 + 文件）
+    - 控制台：JSON 格式决策结果
+    - 文件：reports/etf-daily/YYYY-MM-DD/{mode}_{HHMMSS}.json（L321 教训 P1-2 修复）
     - 钉钉推送（买卖信号 + 警告）
-    - 决策快照（decision_snapshot.json）
+    - 决策快照（decision_snapshot.json 落库）
 
   触发词：ETF 决策 / ETF 每日检查 / 跑 ETF / ETF 评估
 ---

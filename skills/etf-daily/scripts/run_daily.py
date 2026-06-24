@@ -255,6 +255,11 @@ def main() -> int:
         default=None,
         help="数据库路径（默认用 ETF_QUANT_DB_PATH 环境变量）",
     )
+    parser.add_argument(
+        "--report-dir",
+        default=None,
+        help="报告输出根目录（默认 reports/etf-daily/YYYY-MM-DD/，按 L321 教训 P1-2）",
+    )
     args = parser.parse_args()
 
     # 数据库路径（按 L321 教训：使用 resolve_db_path 兜底 cwd 漂移）
@@ -271,7 +276,28 @@ def main() -> int:
     else:
         return 1
 
+    # 控制台输出（保持向后兼容）
     print(json.dumps(result, ensure_ascii=False, indent=2))
+
+    # 文件落盘（按 L321 教训 P1-2：SKILL.md 文档承诺"控制台 + 文件"）
+    try:
+        from etf_quant.utils.report_writer import write_report
+        # 用 result 中的 timestamp 字段（如果有），保证文件名与决策时间一致
+        ts = result.get("timestamp") if isinstance(result, dict) else None
+        report_path = write_report(
+            result=result,
+            mode=args.mode,
+            report_dir=args.report_dir,
+            timestamp=ts,
+        )
+        print(f"[etf-daily] report = {report_path}", file=sys.stderr)
+    except Exception as e:
+        # 文件落盘失败不应阻塞决策输出（写日志即可）
+        print(
+            f"[etf-daily] WARN: report write failed: {type(e).__name__}: {e}",
+            file=sys.stderr,
+        )
+
     return 0
 
 

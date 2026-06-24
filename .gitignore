@@ -42,3 +42,7 @@ Thumbs.db
 
 # 测试产物（scripts/run_unit_tests.sh 生成）
 reports/pytest/*.log
+
+# 决策报告（运行时产物，按日期分目录，cron 写）
+# 顶层 reports/2026-06-24_daily_run/ 是开发复盘留底，本地保留不入 git
+reports/etf-daily/
