@@ -118,8 +118,92 @@ def run_daily(db_path: str) -> dict:
             decision = "HOLD"
             buy_candidates = []
 
-    # 7. 决策快照
+    # 7. 决策快照（按 L321 教训 P2-2：补齐 8 个 JSON 字段）
     _now = __import__("datetime").datetime.now().isoformat(timespec="seconds")
+
+    # 7.1 计算持仓级字段（target_price/stop_loss_price/stop_profit_price）
+    target_price_val = 0.0
+    stop_loss_price_val = 0.0
+    stop_profit_price_val = 0.0
+    risk_reward_ratio_val = 0.0
+    expected_hold_days_val = 0
+
+    if holdings_guide:
+        # 取第一只持仓（决策聚焦核心持仓）
+        h = holdings_guide[0]
+        try:
+            target_price_val = float(getattr(h, "take_profit_price", 0.0))
+            stop_loss_price_val = float(getattr(h, "stop_loss_price", 0.0))
+            stop_profit_price_val = float(getattr(h, "take_profit_price", 0.0))
+            # risk_reward = (target - entry) / (entry - stop_loss)，简化为 max_profit / max_loss
+            if stop_loss_price_val > 0:
+                risk_reward_ratio_val = round(
+                    abs(target_price_val - getattr(h, "entry_price", 0.0))
+                    / abs(stop_loss_price_val - getattr(h, "entry_price", 0.0)),
+                    2,
+                )
+            expected_hold_days_val = int(getattr(h, "expire_in_days", 0) or 0)
+        except Exception:
+            pass  # 持仓字段不全时回退到 0
+
+    # 7.2 构造 8 个 JSON 字段
+    config_json_val = json.dumps({
+        "strategy": strategy.__class__.__name__,
+        "model": "v2_sop",
+        "version": "2.0",
+    }, ensure_ascii=False)
+
+    evaluation_json_val = json.dumps({
+        "holdings_count": len(holdings_guide),
+        "buy_candidates_count": len(buy_candidates),
+        "sell_candidates_count": len(sell_candidates),
+        "data_freshness_minutes": float(data_freshness.split()[1]) if "分钟" in data_freshness else None,
+    }, ensure_ascii=False)
+
+    factor_breakdown_json_val = json.dumps({
+        # 持仓排名（如果有）
+        "holding_ranks": {
+            code: {
+                "sharpe": r.get("sharpe"),
+                "rank": r.get("rank_in_universe"),
+                "universe_size": r.get("universe_size"),
+                "status": r.get("status"),
+            }
+            for code, r in (holding_ranks or {}).items()
+        } if holding_ranks else {},
+    }, ensure_ascii=False)
+
+    today_top_10_json_val = json.dumps({
+        "buy_candidates": buy_candidates,
+        "sell_candidates": sell_candidates,
+    }, ensure_ascii=False)
+
+    # 跑上一次 walk_forward（如果仓位是非空）+ 最近的实盘记录
+    backtest_summary = []
+    for code in (core_codes[:3] if holdings_guide else core_codes[:5]):
+        try:
+            from etf_quant.backtest.backtesting_adapter import RealBacktestEngine
+            r = RealBacktestEngine().run(code=code, db_path=Path(db_path))
+            backtest_summary.append({
+                "code": r.code,
+                "total_return": round(r.total_return, 2),
+                "sharpe": round(r.sharpe, 2),
+                "max_drawdown": round(r.max_drawdown, 2),
+                "n_trades": r.n_trades,
+            })
+        except Exception:
+            pass
+    backtest_last_10_json_val = json.dumps({
+        "samples": backtest_summary,
+    }, ensure_ascii=False)
+
+    reasoning_val = json.dumps({
+        "decision": decision,
+        "reason": "; ".join(warnings) if warnings else "无警告",
+        "market_mode": market_mode,
+        "rank_trigger": bool(sell_candidates),
+    }, ensure_ascii=False)
+
     snapshot = DecisionSnapshot(
         snapshot_id=f"snap_{Path(db_path).stem}_{_now}",
         snapshot_time=_now,
@@ -128,6 +212,19 @@ def run_daily(db_path: str) -> dict:
         model_name="v2_sop",
         strategy_name=strategy.__class__.__name__,
         market_regime=market_mode,
+        # 补齐 8 个 JSON 字段（L321 教训 P2-2）
+        config_json=config_json_val,
+        evaluation_json=evaluation_json_val,
+        factor_breakdown_json=factor_breakdown_json_val,
+        today_top_10_json=today_top_10_json_val,
+        backtest_last_10_json=backtest_last_10_json_val,
+        reasoning=reasoning_val,
+        # 持仓级字段
+        target_price=target_price_val,
+        stop_loss_price=stop_loss_price_val,
+        stop_profit_price=stop_profit_price_val,
+        risk_reward_ratio=risk_reward_ratio_val,
+        expected_hold_days=expected_hold_days_val,
     )
     snapshot_repo.insert(snapshot)
 
