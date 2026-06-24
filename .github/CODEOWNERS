@@ -1,0 +1,18 @@
+# CODEOWNERS — 自动指派 reviewer
+# 借鉴 GitHub 官方 CODEOWNERS 文档（docs.github.com/repos）
+
+# 全局默认 owner
+* @moon-sea-wizard
+
+# 数据层核心
+/src/etf_quant/data_layer/ @moon-sea-wizard
+
+# 因子模块
+/src/etf_quant/alpha/ @moon-sea-wizard
+
+# 回测引擎
+/src/etf_quant/backtest/ @moon-sea-wizard
+
+# 教学文档
+/docs/TEACHING_FRAMEWORK.md @moon-sea-wizard
+/docs/NEW_USER_GUIDE.md @moon-sea-wizard

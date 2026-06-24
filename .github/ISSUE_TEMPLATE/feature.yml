@@ -1,0 +1,53 @@
+name: Feature Request
+description: 新功能/新因子/新 skill 建议
+title: "[Feature] "
+labels: ["enhancement", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        欢迎提新功能建议！请描述清楚需求和使用场景。
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: 类型
+      options:
+        - 新因子（如 27→28 因子）
+        - 新 skill
+        - 新数据源
+        - 新策略
+        - 文档/教学改进
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题（要解决什么？）
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 解决方案（你建议怎么做？）
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案（考虑过其他方式吗？）
+      placeholder: 如查过其他开源项目类似功能，请贴链接
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 附加上下文
+      placeholder: |
+        - 教育用户场景？
+        - 散户/专业用户？
+        - 是否愿意贡献代码？

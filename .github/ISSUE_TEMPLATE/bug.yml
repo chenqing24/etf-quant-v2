@@ -1,0 +1,78 @@
+name: Bug Report
+description: 报告 bug（数据/策略/代码错误）
+# 借鉴 GitHub 官方模板（docs.github.com/communities）
+
+title: "[Bug] "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢报告 bug！请填写以下信息，帮我们快速定位问题。
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: 涉及模块
+      options:
+        - etf-daily (每日决策)
+        - etf-research (回测验证)
+        - quant-knowledge (策略知识)
+        - stock-analyze (个股分析)
+        - stock-portfolio (组合管理)
+        - backtest (回测引擎)
+        - alpha (因子)
+        - data_layer (数据层)
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      placeholder: v2.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 运行 `python3 skills/etf-daily/scripts/run_daily.py daily`
+        2. ...
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expect
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: 环境
+      placeholder: |
+        - OS: Ubuntu 22.04
+        - Python: 3.11.5
+        - etf-quant-v2: v2.0.0
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 错误日志
+      render: shell
