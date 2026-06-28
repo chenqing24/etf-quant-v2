@@ -23,9 +23,16 @@ DB_PATH = REPO_ROOT / "data" / "etf.db"
 
 
 def _run_daily() -> dict:
-    """跑 daily 并返回最新决策 JSON"""
+    """跑 daily 并返回最新决策 JSON
+
+    注意：必须显式指定 --db-path 指向真实 DB，避免 pytest fixture 拦截。
+    """
+    real_db = REPO_ROOT / "data" / "etf.db"
+    if not real_db.exists():
+        pytest.skip(f"DB 不存在：{real_db}")
+
     result = subprocess.run(
-        ["bash", "scripts/run_and_log.sh", "daily"],
+        ["bash", "scripts/run_and_log.sh", "daily", "--db-path", str(real_db)],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,

@@ -147,14 +147,38 @@ def run_daily(db_path: str) -> dict:
             # 末位持仓 + 非崩盘 → SELL 评估（不强制，提示风险）
             decision = "SELL"
             buy_candidates = []
-        elif market_mode == "range_bound":
-            # 震荡市：只持有不买入（避免被套）
-            decision = "HOLD"
-            buy_candidates = []
         else:
-            # trend_up / trend_down：持有 + 趋势跟随
+            # HOLD 分支（range_bound / trend_up / trend_down 都走这里）
+            # D-013 改进：即使 HOLD 也跑 8 因子打分，候选放在 buy_candidates 给用户看（决策仍是 HOLD）
             decision = "HOLD"
-            buy_candidates = []
+            try:
+                from etf_quant.alpha.scoring import CrossSectionalScorer
+                from etf_quant.alpha.factor_set import FactorSet
+                from etf_quant.alpha.weight_scheme import WeightScheme
+
+                from etf_quant.data_layer.loader import DataLoader
+                loader = DataLoader(db_path=db_path)
+                loaded = loader.load(min_rows=120, codes=core_codes)
+                factor_data = {code: df for code, df in loaded.items()
+                               if df is not None and not df.empty}
+
+                scorer = CrossSectionalScorer(
+                    factor_set=FactorSet.eight_factor_v2(),
+                    weight_scheme=WeightScheme.d004_b2(),
+                )
+                result = scorer.score(market_mode, factor_data)
+                if result.has_data():
+                    top5 = result.top_k(5)
+                    buy_candidates = [
+                        {"code": code, "score": round(score, 4), "rank": i + 1}
+                        for i, (code, score) in enumerate(top5)
+                    ]
+                    warnings.append(f"HOLD 但已跑 8 因子打分（top 5 候选）")
+                else:
+                    buy_candidates = []
+            except Exception as e:
+                warnings.append(f"HOLD 分支 Scorer 调用失败: {type(e).__name__}: {str(e)[:80]}")
+                buy_candidates = []
 
     # 7. 决策快照（按 L321 教训 P2-2：补齐 8 个 JSON 字段）
     _now = __import__("datetime").datetime.now().isoformat(timespec="seconds")
