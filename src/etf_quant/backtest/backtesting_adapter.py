@@ -92,8 +92,18 @@ def _make_strategy_class(factor_names: List[str], top_k: int):
                 )
                 self.factors[fname] = series
 
-            # 合成 score = 等权求和（v1 时代默认权重；后续可改 IC 加权）
-            self.composite = sum(self.factors.values()) / len(self.factors)
+            # 合成 score = D-004 B2 加权求和（D-013 取代等权硬编码）
+            # 设计依据：reports/2026-06-28_d013_daily_scoring/DECISIONS.md
+            from etf_quant.alpha.weight_scheme import WeightScheme
+            scheme = WeightScheme.d004_b2()
+            # 当前 Backtesting.py 是单标的回测（不是横截面），所以用 trend_up 权重作为默认
+            # 横截面打分应在 multi-ETF 场景使用 CrossSectionalScorer
+            weights_t = scheme.get_weights("trend_up")
+            weighted_sum = sum(
+                weights_t.get(fname, 1.0 / len(self.factors)) * self.factors[fname]
+                for fname in self.factors
+            )
+            self.composite = weighted_sum
 
         def next(self):
             # Top K 触发买入（这里简化：单标的，所以 score > 0 就持有）
