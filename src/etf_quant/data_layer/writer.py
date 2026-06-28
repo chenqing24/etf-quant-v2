@@ -228,10 +228,10 @@ class DataWriter:
     ) -> Dict[str, int]:
         """
         批量写入多只ETF的日线数据
-        
+
         Args:
             records: {code: DataFrame, ...}
-        
+
         Returns:
             Dict[str, int]: {code: count, ...}
         """
@@ -243,12 +243,164 @@ class DataWriter:
             except DataValidationError as e:
                 logger.warning(f"写入 {code} 失败: {e}")
                 results[code] = 0
-        
+
         total = sum(results.values())
         logger.info(f"批量写入完成: {len(results)} 只ETF, {total} 条记录")
-        
+
         return results
-    
+
+    def write_60min(
+        self,
+        code: str,
+        df: pd.DataFrame,
+        source: str = 'akshare_60min'
+    ) -> int:
+        """
+        写入 60min K 线数据（增量更新，D-006 决策，2026-06-25 加）
+
+        Args:
+            code: 证券代码（无前缀，如 '515050'）
+            df: 60min K 线 DataFrame
+                必须包含列: datetime, open, high, low, close, volume
+                datetime 格式: YYYY-MM-DD HH:MM:SS
+            source: 数据来源标识（akshare_60min / tencent_60min）
+
+        Returns:
+            int: 实际新增的记录数
+
+        Raises:
+            DataValidationError: 数据格式校验失败
+        """
+        # 数据校验
+        errors = self._validate_60min(code, df)
+        if errors:
+            raise DataValidationError(f"60min 数据校验失败: {len(errors)} 个错误", errors)
+
+        # 确保 etf_60min 表存在
+        self._ensure_60min_table()
+
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        conn.execute('PRAGMA journal_mode=WAL')
+        count = 0
+        now = datetime.now().isoformat()
+
+        for _, row in df.iterrows():
+            dt_str = str(row['datetime'])
+            # UNIQUE(code, datetime) 保证唯一
+            existing = conn.execute(
+                'SELECT 1 FROM etf_60min WHERE code=? AND datetime=?',
+                (code, dt_str)
+            ).fetchone()
+
+            if existing:
+                # 已存在，更新 updated_at
+                conn.execute(
+                    'UPDATE etf_60min SET updated_at=? WHERE code=? AND datetime=?',
+                    (now, code, dt_str)
+                )
+            else:
+                # 插入新记录
+                conn.execute('''
+                    INSERT INTO etf_60min
+                    (code, datetime, open, close, high, low, volume, source, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    code, dt_str,
+                    float(row['open']), float(row['close']),
+                    float(row['high']), float(row['low']),
+                    float(row['volume']),
+                    source, now, now
+                ))
+                count += 1
+
+        conn.commit()
+        conn.close()
+        logger.info(f"写入 60min: {code}, +{count} 条 ({source})")
+        return count
+
+    def write_60min_batch(
+        self,
+        records: Dict[str, pd.DataFrame]
+    ) -> Dict[str, int]:
+        """
+        批量写入多只 ETF 的 60min 数据（D-006）
+
+        Args:
+            records: {code: DataFrame, ...}
+
+        Returns:
+            Dict[str, int]: {code: 新增数, ...}
+        """
+        results = {}
+        for code, df in records.items():
+            try:
+                count = self.write_60min(code, df)
+                results[code] = count
+            except DataValidationError as e:
+                logger.warning(f"60min 写入 {code} 失败: {e}")
+                results[code] = 0
+            except Exception as e:
+                logger.error(f"60min 写入 {code} 异常: {type(e).__name__}: {e}")
+                results[code] = 0
+
+        total = sum(results.values())
+        logger.info(f"批量 60min 写入完成: {len(results)} 只ETF, {total} 条新增")
+        return results
+
+    def _ensure_60min_table(self):
+        """确保 etf_60min 表存在（D-006）"""
+        conn = sqlite3.connect(self.db_path)
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS etf_60min (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT NOT NULL,
+                datetime TEXT NOT NULL,
+                open REAL, close REAL, high REAL, low REAL,
+                volume REAL,
+                source TEXT DEFAULT 'akshare_60min',
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT,
+                UNIQUE(code, datetime)
+            )
+        ''')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_60min_code ON etf_60min(code)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_60min_dt ON etf_60min(datetime)')
+        conn.commit()
+        conn.close()
+
+    def _validate_60min(self, code: str, df: pd.DataFrame) -> list:
+        """60min 数据校验（D-006 业界最佳实践：业务约束检查）"""
+        errors = []
+        required = {'datetime', 'open', 'high', 'low', 'close', 'volume'}
+        missing = required - set(df.columns)
+        if missing:
+            errors.append({'code': code, 'error': f'missing columns: {missing}'})
+            return errors
+        for i, row in df.iterrows():
+            # OHLC 业务约束：high >= low
+            try:
+                if float(row['high']) < float(row['low']):
+                    errors.append({'code': code, 'row': i, 'error': 'high < low'})
+            except (ValueError, TypeError):
+                errors.append({'code': code, 'row': i, 'error': 'high/low non-numeric'})
+                continue
+            # 价格 > 0
+            for col in ['open', 'high', 'low', 'close']:
+                try:
+                    if float(row[col]) <= 0:
+                        errors.append({'code': code, 'row': i, 'field': col, 'error': 'must be > 0'})
+                        break
+                except (ValueError, TypeError):
+                    errors.append({'code': code, 'row': i, 'field': col, 'error': 'non-numeric'})
+                    break
+            # 成交量 >= 0
+            try:
+                if float(row['volume']) < 0:
+                    errors.append({'code': code, 'row': i, 'field': 'volume', 'error': 'must be >= 0'})
+            except (ValueError, TypeError):
+                errors.append({'code': code, 'row': i, 'field': 'volume', 'error': 'non-numeric'})
+        return errors
+
     def write_realtime(
         self,
         code: str,
