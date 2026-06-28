@@ -86,7 +86,45 @@ def run_daily(db_path: str) -> dict:
                             "reason": f"崩盘市（{market_report.reason}），清仓避险"} for h in holdings_guide[:10]]
     elif len(holdings_guide) == 0:
         decision = "BUY"
-        buy_candidates = [{"code": c, "score": 0.5} for c in core_codes[:5]]
+        # D-013 修复：用 CrossSectionalScorer 真实打分（取代占位 0.5）
+        # 设计依据：reports/2026-06-28_d013_daily_scoring/DECISIONS.md
+        try:
+            from etf_quant.alpha.scoring import CrossSectionalScorer
+            from etf_quant.alpha.factor_set import FactorSet
+            from etf_quant.alpha.weight_scheme import WeightScheme
+
+            # 加载 14 只 core ETF 的日线数据
+            from etf_quant.data_layer.loader import DataLoader
+            loader = DataLoader(db_path=db_path)
+            loaded = loader.load(min_rows=120, codes=core_codes)  # 120 天够 8 因子
+            factor_data = {code: df for code, df in loaded.items() if df is not None and not df.empty}
+            warnings.append(f"已加载 {len(factor_data)}/{len(core_codes)} ETF 日线数据")
+
+            # 跑 8 因子横截面打分
+            scorer = CrossSectionalScorer(
+                factor_set=FactorSet.eight_factor_v2(),
+                weight_scheme=WeightScheme.d004_b2(),
+            )
+            result = scorer.score(market_mode, factor_data)
+
+            # 取 top 5（按 score 降序）
+            if result.has_data():
+                top5 = result.top_k(5)
+                buy_candidates = [
+                    {"code": code, "score": round(score, 4)}
+                    for code, score in top5
+                ]
+                # 追加 rank 字段（用户教学用）
+                for i, (code, score) in enumerate(top5, 1):
+                    buy_candidates[i - 1]["rank"] = i
+                warnings.extend(result.warnings)
+            else:
+                # 兜底：数据不足时退回占位
+                warnings.append(f"Scorer 无有效数据，回退占位：{result.warnings[:3]}")
+                buy_candidates = [{"code": c, "score": 0.5} for c in core_codes[:5]]
+        except Exception as e:
+            warnings.append(f"Scorer 调用失败: {type(e).__name__}: {str(e)[:100]}")
+            buy_candidates = [{"code": c, "score": 0.5} for c in core_codes[:5]]
         sell_candidates = []
     elif len(holdings_guide) > 5:
         decision = "SELL"
