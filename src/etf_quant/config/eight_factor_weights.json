@@ -3,6 +3,7 @@
   "_source": "reports/2026-06-25_eight_factor_v2/D-004_top3_weights.json (scheme=B2)",
   "_migration_date": "2026-06-28",
   "_migration_mission": "D-013 daily 8 因子综合打分（修复 P0 占位符）",
+  "_d0131_update": "2026-06-28 因子 ID 从通用名（DMA/FIB）改为 v2 registry 内部 ID（T6_dma/T7_ma_arrangement）",
   "schemes": {
     "B2": {
       "scheme_id": "B2",
@@ -20,9 +21,9 @@
           "M4_rsi": 0.10,
           "V2_obv": 0.05,
           "V3_maobv": 0.05,
-          "DMA": 0.30,
+          "T6_dma": 0.30,
           "M2_momentum_5d": 0.15,
-          "FIB": 0.25
+          "T7_ma_arrangement": 0.25
         },
         "range_bound": {
           "W2_boll_width": 0.10,
@@ -30,9 +31,9 @@
           "M4_rsi": 0.25,
           "V2_obv": 0.15,
           "V3_maobv": 0.15,
-          "DMA": 0.15,
+          "T6_dma": 0.15,
           "M2_momentum_5d": 0.10,
-          "FIB": 0.05
+          "T7_ma_arrangement": 0.05
         }
       }
     }

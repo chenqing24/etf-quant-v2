@@ -40,7 +40,7 @@ def test_run_factor_evaluation_outputs_csv():
     # 验证 CSV
     assert ICIR_CSV.exists(), f"{ICIR_CSV} 不存在"
     df = pd.read_csv(ICIR_CSV)
-    assert len(df) == 27, f"27 因子，got {len(df)}"
+    assert len(df) == 29, f"29 因子（D-013.1: 27+T6/T7），got {len(df)}"
     assert "factor_name" in df.columns
     assert "ic" in df.columns
     assert "ir" in df.columns

@@ -18,9 +18,9 @@ from etf_quant.alpha.factor_base import FactorMetadata
 
 
 def test_28_factors_have_aliases():
-    """US-001 AC1: 28 因子全有 aliases，每个至少 1 个业界通用名"""
-    assert len(FACTOR_REGISTRY) == 27, f"Expected 28 factors, got {len(FACTOR_REGISTRY)}"
-    assert len(ALIASES_REGISTRY) == 27, f"Expected 28 alias entries, got {len(ALIASES_REGISTRY)}"
+    """US-001 AC1: 29 因子全有 aliases，每个至少 1 个业界通用名（D-013.1：27+T6/T7）"""
+    assert len(FACTOR_REGISTRY) == 29, f"Expected 29 factors, got {len(FACTOR_REGISTRY)}"
+    assert len(ALIASES_REGISTRY) == 29, f"Expected 29 alias entries, got {len(ALIASES_REGISTRY)}"
     for name in FACTOR_REGISTRY:
         assert name in ALIASES_REGISTRY, f"因子 {name} 缺 aliases"
         assert len(ALIASES_REGISTRY[name]) >= 1, f"因子 {name} aliases 为空"

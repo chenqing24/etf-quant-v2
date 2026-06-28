@@ -45,8 +45,8 @@ def test_migrate_legacy_factor_name_function():
 
 
 def test_27_factors_after_us002():
-    """US-002 AC: 27 因子 (US-001 加 T5 → 28，US-002 删 M6 → 27)"""
-    assert len(FACTOR_REGISTRY) == 27
+    """US-002 + D-013.1 AC: 29 因子 (US-002 删 M6 → 27，D-013.1 加 T6/T7 → 29)"""
+    assert len(FACTOR_REGISTRY) == 29
     # 验证 S2 是 strength 版
     from etf_quant.alpha.factors import get_factor
     s2 = get_factor("S2_adx_strength")

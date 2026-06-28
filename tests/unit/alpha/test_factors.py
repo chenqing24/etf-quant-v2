@@ -43,13 +43,16 @@ def sample_df() -> pd.DataFrame:
 # ────────────────────────────────────────────────────────────
 
 def test_27_factors_registered():
-    """验证 27 因子全部注册（US-002 删 M6_macd_diff 重复因子后）。"""
+    """验证 29 因子全部注册（US-002 + D-013.1）。"""
     # US-001 加 T5_ma5 → 28；US-002 删 M6_macd_diff（公式与 T1 重复）→ 27
-    assert len(FACTOR_REGISTRY) == 27
-    assert len(list_factors()) == 27
+    # D-013.1 加 T6_dma + T7_ma_arrangement → 29
+    assert len(FACTOR_REGISTRY) == 29
+    assert len(list_factors()) == 29
     assert "M6_macd_diff" not in FACTOR_REGISTRY  # 已删
     assert "S2_adx" not in FACTOR_REGISTRY  # 已改名 S2_adx_strength
     assert "S2_adx_strength" in FACTOR_REGISTRY
+    assert "T6_dma" in FACTOR_REGISTRY  # D-013.1
+    assert "T7_ma_arrangement" in FACTOR_REGISTRY  # D-013.1
 
 
 def test_all_factors_compute_without_error(sample_df):

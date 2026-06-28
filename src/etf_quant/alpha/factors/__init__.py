@@ -1,8 +1,8 @@
 """
-alpha/factors/__init__.py — 28 因子注册入口（US-013，2026-06-21 加 T5_ma5）
+alpha/factors/__init__.py — 29 因子注册入口（US-013，2026-06-21 加 T5_ma5；D-013.1 加 T6/T7）
 
 按规则 11（先调研再实现）+ 规则 14（架构改造有回归测试）：
-    - 27 因子 = 25 继承（v1 业界标准公式，US-002 删 M6_macd_diff 重复）+ 1 W4 RV（v9 唯一稳健新写）+ 1 T5_ma5（散户新加）
+    - 29 因子 = 27（D-013.1 之前）+ T6 DMA（D-013.1 新增，趋势类）+ T7 MA 排列（D-013.1 新增，FIB 别名）
     - 工厂模式：FACTOR_REGISTRY[name] -> Factor class
     - 列表模式：ALL_FACTORS 顺序遍历
 
@@ -54,17 +54,21 @@ from etf_quant.alpha.factors.inherited import (
 )
 from etf_quant.alpha.factors.t1_macd import T1MACDbarFactor
 from etf_quant.alpha.factors.t5_ma5 import T5MA5Factor  # 散户新加（2026-06-21 Sprint-7 后补）
+from etf_quant.alpha.factors.t6_dma import T6DMAFactor  # D-013.1 新增（2026-06-28）
+from etf_quant.alpha.factors.t7_ma_arrangement import T7MAArrangementFactor  # D-013.1 新增（2026-06-28）
 from etf_quant.alpha.factors.v1_volume import V1VolumeFactor
 from etf_quant.alpha.factors.w4_rv import W4RVFactor
 
-# 27 因子注册表（key: 因子名, value: Factor 类）
+# 29 因子注册表（key: 因子名, value: Factor 类）
 FACTOR_REGISTRY: dict[str, type[Factor]] = {
-    # 趋势类 (4)
+    # 趋势类 (7)
     "T1_macd_bar": T1MACDbarFactor,
     "T2_ma_bull": T2MABullFactor,
     "T3_sar_trend": T3SARTrendFactor,
     "T4_adx_trend": T4ADXTrendFactor,
     "T5_ma5": T5MA5Factor,  # 散户新加（2026-06-21）
+    "T6_dma": T6DMAFactor,  # D-013.1 新增（2026-06-28）
+    "T7_ma_arrangement": T7MAArrangementFactor,  # D-013.1 新增（2026-06-28）
     # 动量类 (6)
     "M1_momentum_3d": M1Momentum3dFactor,
     "M2_momentum_5d": M2Momentum5dFactor,
@@ -124,6 +128,9 @@ ALIASES_REGISTRY: dict[str, list[str]] = {
     "N1_reversal_3d": ["REVERSAL_3D", "3日反转", "均值回归_3D"],
     "N2_reversal_5d": ["REVERSAL_5D", "5日反转", "均值回归_5D"],
     "N3_rsi_oversold": ["RSI_OS", "RSI超卖", "RSI_Oversold"],
+    # D-013.1 新增（2026-06-28）
+    "T6_dma": ["DMA", "dma", "Difference of Moving Averages", "平行线差"],
+    "T7_ma_arrangement": ["FIB", "fib", "MA_alignment", "均线排列", "MA排列"],
 }
 
 # 因子 legacy 映射表（规则 21 + US-002）：
@@ -144,8 +151,8 @@ def migrate_legacy_factor_name(old_name: str) -> str:
 # 顺序列表（保证计算可重复）
 ALL_FACTORS: list[type[Factor]] = list(FACTOR_REGISTRY.values())
 
-# 验证：必须是 27 个
-assert len(ALL_FACTORS) == 27, f"Expected 27 factors (US-002 删 M6_macd_diff 重复后), got {len(ALL_FACTORS)}: {[f.__name__ for f in ALL_FACTORS]}"
+# 验证：必须是 29 个（D-013.1：27 + T6 DMA + T7 MA 排列）
+assert len(ALL_FACTORS) == 29, f"Expected 29 factors (D-013.1: 27 + T6 + T7), got {len(ALL_FACTORS)}: {[f.__name__ for f in ALL_FACTORS]}"
 
 
 def get_factor(name: str) -> Factor:

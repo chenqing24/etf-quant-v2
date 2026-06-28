@@ -42,7 +42,8 @@ class FactorSet:
         'eight_factor_v2'
         >>> len(fs.factor_names)
         8
-        >>> "DMA" in fs.factor_names  # 注意：DMA 当前不在 FACTOR_REGISTRY
+        >>> "T6_dma" in fs.factor_names  # D-013.1: DMA 已注册为 T6_dma
+        >>> "T7_ma_arrangement" in fs.factor_names  # D-013.1: FIB 已注册为 T7_ma_arrangement
         False
     """
 
@@ -98,19 +99,22 @@ class FactorSet:
     def eight_factor_v2(cls) -> "FactorSet":
         """D-004 精选 8 因子（v2 SOP 落地版）。
 
-        注意：当前 FACTOR_REGISTRY 27 因子中只有 6 个直接对应 D-004：
+        注意（D-013.1，2026-06-28 更新）：
+            FACTOR_REGISTRY 29 因子中 D-004 直接对应 8 个：
             - W2_boll_width ✓
             - B1_boll_upper ✓
             - M4_rsi ✓
             - V2_obv ✓
             - V3_maobv ✓
             - M2_momentum_5d ✓
-        DMA / FIB 当前不在 FACTOR_REGISTRY（D-013 后续补，或在 Scorer 内部特判）。
+            - T6_dma ✓（D-013.1 新增）
+            - T7_ma_arrangement ✓（D-013.1 新增，FIB 别名）
+        之前版本（27 因子）只覆盖 6 个，DMA/FIB 在 Scorer 内部特判。
+        现在 8 因子都在 registry，可直接走 Scorer。
 
         Returns:
-            FactorSet(name="eight_factor_v2", 6 因子 in registry)
+            FactorSet(name="eight_factor_v2", 8 因子 in registry)
         """
-        # 暂时返回 6 因子（registry 已有的），DMA/FIB 在 Scorer 内部特殊处理
         return cls(
             name="eight_factor_v2",
             factor_names=(
@@ -120,12 +124,14 @@ class FactorSet:
                 "V2_obv",
                 "V3_maobv",
                 "M2_momentum_5d",
+                "T6_dma",  # D-013.1 新增
+                "T7_ma_arrangement",  # D-013.1 新增（FIB 别名）
             ),
         )
 
     @classmethod
     def all_registered(cls) -> "FactorSet":
-        """全 27 因子（用于 IC/IR 批量评估、研究场景）"""
+        """全 29 因子（D-013.1：27+T6/T7，用于 IC/IR 批量评估、研究场景）"""
         return cls(name="all_registered", factor_names=tuple(FACTOR_REGISTRY.keys()))
 
 

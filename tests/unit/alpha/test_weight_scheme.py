@@ -107,9 +107,9 @@ def test_get_weights_returns_copy():
     """get_weights 返回拷贝（防外部修改污染内部状态）"""
     ws = WeightScheme.d004_b2()
     w1 = ws.get_weights("trend_up")
-    w1["DMA"] = 0.99  # 修改拷贝
+    w1["T6_dma"] = 0.99  # 修改拷贝（D-013.1：DMA → T6_dma）
     w2 = ws.get_weights("trend_up")
-    assert w2["DMA"] == 0.30  # 原始未变
+    assert w2["T6_dma"] == 0.30  # 原始未变
 
 
 def test_get_weights_invalid_mode():

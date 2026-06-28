@@ -15,18 +15,20 @@ from etf_quant.alpha.factors import FACTOR_REGISTRY
 
 
 def test_eight_factor_v2_basic():
-    """D-004 精选 8 因子 v2 子集：6 因子 in registry + 名称正确"""
+    """D-004 + D-013.1 精选 8 因子 v2 子集：8 因子全在 registry + 名称正确"""
     fs = FactorSet.eight_factor_v2()
     assert fs.name == "eight_factor_v2"
-    assert len(fs) == 6  # 当前只有 6 个在 registry
+    assert len(fs) == 8  # D-013.1: 27+T6/T7 → 8 因子都在 registry
     assert "W2_boll_width" in fs
     assert "M2_momentum_5d" in fs
+    assert "T6_dma" in fs  # D-013.1 新增
+    assert "T7_ma_arrangement" in fs  # D-013.1 新增
 
 
 def test_all_registered_count():
-    """全 27 因子子集：覆盖 FACTOR_REGISTRY 全部"""
+    """全 29 因子子集：覆盖 FACTOR_REGISTRY 全部（D-013.1：27+T6/T7）"""
     fs = FactorSet.all_registered()
-    assert len(fs) == 27
+    assert len(fs) == 29
     assert set(fs.factor_names) == set(FACTOR_REGISTRY.keys())
 
 

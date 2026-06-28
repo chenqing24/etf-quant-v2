@@ -174,6 +174,10 @@ class WeightScheme:
 
         来源：reports/2026-06-25_eight_factor_v2/D-004_top3_weights.json
         评分：ir_score=100 / stability=81 / diversity=94 / economic=62.5 / pref=100 / total=89.44
+
+        注意（D-013.1，2026-06-28）：
+            因子 ID 从通用名（DMA / FIB）改为 v2 registry 内部 ID（T6_dma / T7_ma_arrangement）
+            保持 D-004 权重比例不变（trend_up 趋势类 55% / range 摆动类 50%）
         """
         return cls(
             scheme_id="B2",
@@ -184,9 +188,9 @@ class WeightScheme:
                     "M4_rsi": 0.10,
                     "V2_obv": 0.05,
                     "V3_maobv": 0.05,
-                    "DMA": 0.30,
+                    "T6_dma": 0.30,  # D-013.1：DMA → T6_dma
                     "M2_momentum_5d": 0.15,
-                    "FIB": 0.25,
+                    "T7_ma_arrangement": 0.25,  # D-013.1：FIB → T7_ma_arrangement
                 },
                 "range_bound": {
                     "W2_boll_width": 0.10,
@@ -194,9 +198,9 @@ class WeightScheme:
                     "M4_rsi": 0.25,
                     "V2_obv": 0.15,
                     "V3_maobv": 0.15,
-                    "DMA": 0.15,
+                    "T6_dma": 0.15,  # D-013.1：DMA → T6_dma
                     "M2_momentum_5d": 0.10,
-                    "FIB": 0.05,
+                    "T7_ma_arrangement": 0.05,  # D-013.1：FIB → T7_ma_arrangement
                 },
             },
         )

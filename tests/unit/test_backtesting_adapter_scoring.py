@@ -22,9 +22,9 @@ def test_weight_scheme_d004_b2_available_in_backtest():
     """D-004 B2 权重在 backtest 链路可用（不再用等权硬编码）"""
     scheme = WeightScheme.d004_b2()
     weights_t = scheme.get_weights("trend_up")
-    # B2 trend_up 关键权重：DMA 30% + FIB 25%（重趋势）
-    assert weights_t["DMA"] == 0.30
-    assert weights_t["FIB"] == 0.25
+    # B2 trend_up 关键权重：D-013.1 已改 T6_dma 30% + T7_ma_arrangement 25%（重趋势）
+    assert weights_t["T6_dma"] == 0.30
+    assert weights_t["T7_ma_arrangement"] == 0.25
     # 权重和 = 1
     assert abs(sum(weights_t.values()) - 1.0) < 1e-6
 
