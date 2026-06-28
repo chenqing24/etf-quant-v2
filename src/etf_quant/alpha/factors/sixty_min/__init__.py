@@ -23,3 +23,14 @@ D-007 4 因子：
     - H3 boll_width_pct：布林带宽度百分位
     - H4 price_volume_corr：量价相关性
 """
+from etf_quant.alpha.factors.sixty_min.h1_intraday_trend import H1IntradayTrendFactor
+from etf_quant.alpha.factors.sixty_min.h2_volume_breakout import H2VolumeBreakoutFactor
+from etf_quant.alpha.factors.sixty_min.h3_boll_width_pct import H3BollWidthPctFactor
+from etf_quant.alpha.factors.sixty_min.h4_price_volume_corr import H4PriceVolumeCorrFactor
+
+__all__ = [
+    "H1IntradayTrendFactor",
+    "H2VolumeBreakoutFactor",
+    "H3BollWidthPctFactor",
+    "H4PriceVolumeCorrFactor",
+]
