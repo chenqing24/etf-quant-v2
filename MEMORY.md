@@ -67,6 +67,29 @@
 - **AI 第一眼看到的是项目根目录的引导文件**（AGENTS.md / CLAUDE.md / .cursorrules）
 - v2 仓**之前没有 AI 引导文件**——本 Mission 修复（AGENTS.md + CLAUDE.md + README 更新）
 
+### 3.7 AI 提问过度教训（2026-06-23 USER_JOURNEY 重构时发生）
+- **L-提问过度**：自创根因 = 违反 SOUL.md 规则 11（先调研再实现）
+- **事故过程**：用户批评"提问过度"→ 我没读 SOUL.md 就自创 3 个根因（缺乏判断所有权等）→ 用户再批评"调研不够"→ 才搜 SOUL.md 发现规则 25 已完整覆盖
+- **根因**：
+  - 违反 SOUL.md 规则 12（每次会话首次读取文档索引）
+  - 违反 SOUL.md 规则 11（先调研再实现）
+  - 违反 SOUL.md 规则 6.2（承认错但不立即改正）
+- **预防措施**：
+  1. **每次会话开始全文读 SOUL.md**（避免片段记忆）
+  2. **自创根因前 grep SOUL.md**（防止重复造轮子）
+  3. **自创根因前搜网上 + 试业界最佳实践**（PMC / NN/g / Reddit / Botpress 等）
+  4. **业界答案优先于自创**（参考决策 #019 V2）
+- **业界参考**：
+  - [Cognitive offloading or cognitive overload? PMC12678390 (2025)](https://pmc.ncbi.nlm.nih.gov/articles/PMC12678390/)：AI 应该是 resilience amplifier，不是询问者
+  - SOUL.md 规则 25："列 A/B/C 让新用户选 = 推卸决策"
+  - SOUL.md 规则 6.1："错了就错了，不美化"
+  - SOUL.md 规则 6.2："知错就改，立即改正"
+- **关联决策**：USER_JOURNEY_MAP_DECISIONS.md #019（V2 简洁版）/#020（4 个机制）
+- **预防自检 3 问题**：
+  1. SOUL.md 现有规则有没有覆盖？grep 一下
+  2. 业界最佳实践是什么？搜过没
+  3. 我的"根因"是不是"现象描述"？
+
 ---
 
 ## 四、工具设置
@@ -126,5 +149,32 @@
 
 ---
 
-**最后更新**：2026-06-20（Mission 20260620-080956 完成）
+### 2.8 D-013 设计教训（2026-06-28）
+
+**Sprint-8 D-013 完成 5 commit push**，3 个新抽象（FactorSet / WeightScheme / CrossSectionalScorer）+ P0 占位符修复 + backtest 等权硬编码替换。
+
+**核心教训**：
+1. **"池 vs 配方"必须显式分开**：27 因子（FACTOR_REGISTRY 池）vs 8 因子（D-004 配方）混说 → 代码浪费算力 + 设计混乱
+2. **测试要验业务语义，不仅是结构有效**：e2e 只验 `decision_valid=1` → 写死 0.5 也能过 → P0 异常未被自动化发现
+3. **占位符必须留明显痕迹**：0.5 这种"看起来像分数的占位符"特别危险 → 应该用 `None` 或 `score: "PLACEHOLDER"`
+4. **设计要溯源 PRD AC**：US-020 写"调用 alpha"但实现只 import 没调用 → 写 AC 不等于完成 AC
+
+**可复用规则**：
+> 任何"调用 X 模块"的 AC，必须有 X 模块输出字段的断言测试。  
+> 占位符不用看起来"合理"的默认值（如 0.5），用 None 强制上游处理。  
+> "池 vs 配方"分层：FACTOR_REGISTRY（稳定池） → FactorSet（动态子集） → WeightScheme（权重配置） → Scorer（算法）。
+
+### 2.9 D-013 修复效果（验证数据）
+
+| 项 | 修复前 | 修复后 |
+|---|---|---|
+| daily 候选 score | 全 0.5（写死）| 0.68 ~ 0.84（横截面打分）|
+| 排序 | core 池顺序（无关）| score 降序 |
+| 末位识别 | 不可识别 | ✅ 512170（6/25 末位）不在 top 5 |
+| 单测覆盖 | 0（占位符未覆盖）| 38 单测 + 5 集成 |
+| 业界参考标注 | 部分缺失 | ✅ WorldQuant 101 / Qlib / LEAN / scipy |
+
+---
+
+**最后更新**：2026-06-28（D-013 5 commit 完成）
 **维护人**：福猫管家 🐱
