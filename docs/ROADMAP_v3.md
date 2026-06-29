@@ -1,413 +1,442 @@
-# v3.0 路线图（2026-06-29 重构）
+# v3.0 路线图（按 roadmap-methodology Skill 重写）
 
 > **生成者**：福猫管家 🐱
-> **生成时间**：2026-06-29 12:30
-> **方法论**：RICE + MoSCoW + WSJF + 业务自评 4 维度
-> **依据**：`docs/ITERATION_PLAN_20260623.md`（6 天前）+ 2026-06-29 真实盘点（pytest 424 用例、29 US/196 AC、daily 端到端跑通）
+> **生成时间**：2026-06-29 20:00
+> **方法论**：Phaal 2004（3 阶段 10 步）+ Shape Up 2019（Shaping 4 步 + 7 元素）+ Adjust to Your Size（1 人公司）
+> **Skill 版本**：roadmap-methodology v1.1（8.95/10 A 级）
 > **目标版本**：v3.0（v2.0-final 之上增量）
+> **状态**：📋 待用户确认执行
 
 ---
 
-## 0. 真实基线（2026-06-29 12:30 复盘）
+## Step 1: Gather context（5 问已答）
 
-| 指标 | 数字 | 来源 |
-|------|-----:|------|
-| **模块数** | 14 | `ls src/etf_quant/` |
-| **测试文件** | 45 | `find tests -name 'test_*.py'` |
-| **测试用例** | **424**（不是 217）| `pytest --collect-only` |
-| **测试通过** | **423/424 = 99.76%** | `pytest -q`（1 失败：D-013.3）|
-| **文档 .md** | 54 | `find docs -name '*.md'` |
-| **Skill** | 6 | `ls skills/` |
-| **业务 reports** | 5 | `ls reports/` |
-| **US 总数** | 29 | `docs/PRD.json` |
-| **AC 总数** | 196（**新统计**）| `docs/PRD.json` 累加 |
-| **US passes=true** | 29 (100%) | `docs/PRD.json` |
-| **业务自评脚本** | ❌ **不存在** | `find scripts -name 'business_check*'` |
-| **daily 端到端可跑** | ✅ | 2026-06-29 12:00 实测 BUY top 5 0.52~0.73 |
-| **HEAD** | `0f5097e` | `git log` |
+| Q | 答案 |
+|---|------|
+| Q1 项目 | v3.0 ETF 量化项目（v2.0-final 之上增量，业务闭环 + 散户友好）|
+| Q2 用户 | 月海巫师（1 人公司 + AI 助手 + 散户教育用户）|
+| Q3 时间 | 短段 1 周（v3.0 v1）+ 长段 6 周（v3.0 完整）|
+| Q4 团队 | 1 人 + AI 助手（Adjust to Your Size 简化版）|
+| Q5 "完成" | pytest 100% (424/424) + 业务自评 ≥80 + Sprint 全过 + 用户能自动跑 + 散户可理解 |
 
 ---
 
-## 1. 方法论与评估
+## Phase 1: Preliminary（3 步）
 
-### 1.1 评分方法
+### Step 1: Satisfy essential conditions（满足基本条件）
 
-| 方法 | 出处 | 用途 | 引用 |
-|------|------|------|------|
-| **RICE** | Intercom 2016（Reach × Impact × Confidence / Effort）| 优先级排序 | Wikipedia "RICE score" |
-| **MoSCoW** | Dai Clegg 1994（UK Government）| Must/Should/Could/Won't | Wikipedia "MoSCoW method" |
-| **WSJF** | Dean Leffingwell SAFe | Cost of Delay / Job Duration | Scaled Agile Framework |
-| **业务自评 4 维度** | SOUL.md 规则 24 | 数据完整性/结果合理性/端到端可跑/文档对得上 | MEMORY.md §3 |
-| **6 维度自评** | SOUL.md 规则 7 | 设计/调研/SOP/测试/回归/Git | SOUL.md §二 |
+| 条件 | 状态 | 证据 |
+|------|:----:|------|
+| 用户明确 | ✅ | 月海巫师（PROFILE.md）|
+| 团队规模 | ✅ | 1 人 + AI 助手（Adjust to Your Size）|
+| 数据源稳定 | ✅ | 腾讯 ifzq.gtimg.cn（日线）+ akshare（60min）|
+| 商业模式 | ✅ | B2C 散户"想学方"教育产品（C2 定位）|
+| 资金 / 时间约束 | ✅ | 1 周短段 + 6 周长段（可调）|
 
-### 1.2 评估总览
+### Step 2: Provide leadership / sponsorship
 
-| 类别 | 任务数 | 总人天 | 说明 |
-|------|------:|------:|------|
-| **Must** | 4 | 2.25 | 业务闭环 P0 |
-| **Should** | 8 | 9.5 | 业务优化 + 工程债 |
-| **Could** | 10 | 16.0 | 锦上添花 |
-| **Won't** | 2 | 5.5 | v3.0 不做 |
-| **总计** | **24** | **33.25** | v3.0 全部债 |
+| 角色 | 责任人 | 频率 |
+|------|--------|------|
+| **Owner** | 福猫管家 🐱 | 每日执行 |
+| **Sponsor** | 月海巫师 | 关键决策时 |
+| **Reviewer** | 月海巫师 | Sprint 末（按 SOP-08 8 节）|
 
-**RICE 前 5**：A4 (30) > A3 (20) > A2 (16) > A1 (15) > B6/D4 (10)
-**WSJF 前 5**：A4 (42) > A3 (32) > A2 (26) > A1 (21) > B1/C1 (13)
+### Step 3: Define scope and boundaries
+
+**In scope**（v3.0 包含）：
+- 业务闭环 P0 债（4 项 Must）
+- 业务优化 P1 债（B6/B1/C1/D1/D3/D4）
+- 散户友好（decision_snapshot 解释 + 5 skill 走查）
+- 60min 因子回测评价（D-007 已交付）
+
+**Out of scope**（v3.0 明确不包含）：
+- ❌ v1 旧代码（已下线，etf_strategy/ 空目录）
+- ❌ 新框架（FastAPI/Django）— 保持 CLI + cron
+- ❌ 券商 API 接入 — 用户自行下单
+- ❌ LLM 推理 — 因子逻辑代码化
+- ❌ 实盘交易验证（模拟数据）— 标 v4.0
+- ❌ 量化知识库深度内容（D5 Won't）— RICE=1
+- ❌ Theme 4 根仓清理（E1 Won't）— 决策风险高
+
+**Assumptions**（假设条件）：
+- v2.0-final 29 US 100% passes（已验证）
+- pytest 424 用例 99.76% pass（423/424，1 已知失败 D-013.3）
+- daily 端到端可跑（2026-06-29 12:00 实测 BUY top 5 0.52~0.73）
+- 数据源稳定（腾讯 + akshare）
 
 ---
 
-## 2. 依赖图（DAG）
+## Phase 2: Development（7 步）
+
+### Step 4: Identify the product focus（产品聚焦）
+
+**v3.0 定位**：业务闭环 + 散户友好（不只是代码完成度，是"用户能不能每天自动用 + 散户可理解"）
+
+**v2.0 → v3.0 关键差异**：
+- v2.0：29 US 100% 实现 + 217 测试
+- v3.0：补业务闭环债（业务自评脚本 + D-013.3 修复 + 散户友好）
+
+**为什么是 v3.0 不是 v2.1**：
+- v2.0 = "代码完成度"
+- v3.0 = "用户可使用度"（业务闭环 + 散户友好）
+- 增量足够大，标 v3.0
+
+### Step 5: Identify critical system requirements (SLO)
+
+| SLO | 目标 | 当前 | 差距 | 衡量方法 |
+|-----|------|------|------|----------|
+| **pytest pass rate** | 100% (424/424) | 99.76% (423/424) | **-1%** | `pytest tests/ -q` |
+| **daily 端到端可跑** | 100% | 100% | 0 | `python skills/etf-daily/scripts/run_daily.py daily` |
+| **daily 延迟** | <30s | ~10s | OK | 手动计时 |
+| **业务自评 4 维度分** | ≥80 | 87 (文档,2026-06-23) | TBD | 跑 `scripts/business_check.py`（待建）|
+| **业务自评 4 维度（自动化）** | ≥80 | ❌ 缺脚本 | **-P0** | Sprint 0.1 必建 |
+| **cron 准确性** | 100% 09:30 工作日 | ❌ cron 未建 | **-P0** | Sprint 2.2 必建 |
+| **钉钉推送送达率** | 100% | 未测 | TBD | Sprint 2.2 测 |
+| **散户能看懂 snapshot** | 100% | 缺解释文档 | **-P0** | Sprint 2.4 必做 |
+| **pytest buffer 兼容** | 9.x 跑通 | 单文件跑规避 | 已知债 | Phase 3 修 |
+
+### Step 6: Specify major technology areas（核心技术领域）
+
+**14 模块状态表**（实测盘点 2026-06-29）：
+
+| # | 模块 | 状态 | 验证深度 |
+|:--:|------|:----:|----------|
+| 1 | alpha（29 因子 + 3 层架构）| 🟢 绿 | ✅ 亲自验证 |
+| 2 | data_layer（10 个 Repo）| 🟡 黄 | 听过接口 |
+| 3 | risk（position_guide 22 字段）| 🟢 绿 | ✅ 亲自读 |
+| 4 | execution（tracker 委托 4 Repo）| 🟢 绿 | ✅ 亲自读 |
+| 5 | monitor（4 文件）| 🟢 绿 | market_mode 验证 |
+| 6 | backtest（3 文件）| 🟡 黄 | 听过 4 验证器 |
+| 7 | performance | 🔴 红 | 未读 |
+| 8 | notify（3 文件）| 🔴 红 | 未亲眼验证推送 |
+| 9 | scheduler（2 文件）| 🔴 红 | cron 未建 |
+| 10 | portfolio | 🔴 红 | 未读 |
+| 11 | universe（3 文件）| 🔴 红 | 未读 |
+| 12 | config | 🔴 红 | 未读 |
+| 13 | utils | 🔴 红 | 未读 |
+| 14 | rank（多出来的）| 🔴 红 | 未读 |
+
+### Step 7: Specify technology drivers and targets
+
+| 驱动类型 | 驱动 | 目标 | 衡量 |
+|----------|------|------|------|
+| **业务驱动** | 用户可自动跑 daily | cron 09:30 工作日 + 钉钉推送 | Sprint 2.2 |
+| **业务驱动** | 散户可理解决策 | decision_snapshot 8 字段解释 | Sprint 2.4 |
+| **技术驱动** | pytest 全绿 | 424/424（修 D-013.3）| Sprint 1.1 |
+| **技术驱动** | 业务自评自动化 | business_check.py 跑分 | Sprint 0.1 |
+| **技术驱动** | CI 质量门 | GitHub Actions pytest + ruff + mypy | Sprint 3.1 |
+| **教育驱动** | 用户能学方 | 29 因子中文描述 + 业界别名 | Sprint 2.4 |
+| **教育驱动** | 散户可走查路径 | 5 skill 走查报告 | Sprint 2.4 |
+
+### Step 8: Identify technology alternatives and timelines
+
+**关键决策矩阵**（必须 2+ 方案对比）：
+
+| 决策 | 方案 A | 方案 B | 方案 C | 时间 | RICE 排序 |
+|------|--------|--------|--------|:----:|----------:|
+| **业务自评** | 4 维度简单断言 | 9 维度 250 分 | 1 维度总评 | 0.5~1d | A > B > C |
+| **D-013.3 修复** | 改 mock | 改实现 | 改测试断言 | 0.5d | 调研后选 |
+| **D-009 决策阈值** | 固定 0.65 | 动态（按 market_mode）| 概率三元组 | 2d | A (RICE=4) |
+| **CI 工具** | GitHub Actions | Jenkins | GitLab CI | 1d | A (RICE=8) |
+| **cron 触发方式** | qwenpaw cron | crontab | systemd timer | 1d | A (RICE=8) |
+| **push 通知** | 钉钉 webhook | 邮件 | 飞书 webhook | 0.5d | A 沿用现有 |
+
+### Step 9: Recommend the alternatives and prioritize
+
+**短段（1 周）Must 4 项**（2.25 人天，按 RICE 排序）：
+
+| 序 | Sprint | RICE | WSJF | Effort | 任务 |
+|:--:|--------|:----:|:----:|:------:|------|
+| 1 | **Sprint 0.1** | 15 | 21 | 1.0d | 建 `scripts/business_check.py` |
+| 2 | **Sprint 1.1** | 16 | 26 | 0.5d | 修 D-013.3 test_run_eval |
+| 3 | **Sprint 1.2** | 20 | 32 | 0.25d | 更新 README 测试数 217→424 |
+| 4 | **Sprint 1.3** | 30 | 42 | 0.5d | 跑业务自评拿真分 |
+
+**短段（1 周）Should 3 项**（2.0 人天）：
+
+| 序 | Sprint | RICE | Effort | 任务 |
+|:--:|--------|:----:|:------:|------|
+| 5 | **Sprint 2.1** | 10 | 0.5d | D-012 HOLD 落 snapshot 完整字段 |
+| 6 | **Sprint 2.2** | 8 | 1.0d | D-013.4 cron 09:30 工作日 |
+| 7 | **Sprint 2.4** | 8 | 1.0d | decision_snapshot 8 字段散户解释 |
+
+**短段总人天**：4.25d（1 周内完成）
+
+### Step 10: Create the 5-part report
+
+→ 见末尾 §"5 部分报告"
+
+---
+
+## Phase 3: Follow-up
+
+### Review at each sprint end
+
+按 SOP-08 8 节流程（sprint-reviews/sprint-X.md）
+
+### Update weekly
+
+每个 Phase 末更新本 ROADMAP_v3.md
+
+### Re-evaluate 触发条件
+
+| 触发条件 | 立即动作 |
+|----------|----------|
+| 关键 SLO 跌破阈值（如 pytest < 90%）| 暂停新功能，重评 Step 5 |
+| 新增 Must 任务 | 重新跑 RICE 评分 |
+| 季度末 | 必做 1 次全路线图重评 |
+| 团队规模变化 | 重新调 Adjust to Your Size |
+| Rabbit hole 真实发生 | 立即按 Circuit Breaker 暂停 |
+| 业务方向变化 | 重新跑 Phase 1+2 全流程 |
+
+**不要每周重做全部 10 步**。**只重做受影响部分**。
+
+---
+
+## Shape Up 7 元素（Apply）
+
+### 1. Shaping 4 步（按 Ch 3→4→5→6）
+
+**Ch 3 Set Boundaries**：
+- Appetite 短段 4.25d / 长段 30d
+- "Good" is relative：1d 内"够好"即可
+- Raw idea default response：未成熟想法 = "Maybe some day"
+
+**Ch 4 Find the Elements**：
+- Breadboard：daily → 拉数据 → market_mode → 8 因子 → 综合 → 决策 → snapshot → 推送
+- Fat marker sketches：粗草图，不画完整方案
+
+**Ch 5 Risks and Rabbit Holes**：
+- 已识别 6 项风险（见每 Sprint Pitch Card）
+
+**Ch 6 Write the Pitch**：
+- 7 张 Pitch Card（见下方）
+
+### 2. 5 Pitch Ingredients
+
+**每个 Sprint 一张 Pitch Card**（Problem / Appetite / Solution / Rabbit Holes / No-Gos）
+详细见 `pitch_cards/sprint_X_X.md`（下个 commit 创建）
+
+### 3. Betting Table
+
+| Sprint | Appetite | Problem 严重度 | Solution 可行性 | 总评 |
+|--------|:--------:|:--------------:|:---------------:|:----:|
+| 0.1 | 1.0d | ⭐⭐⭐⭐ | ✅ 简单 | **必选** |
+| 1.1 | 0.5d | ⭐⭐⭐ | ✅ 调研后修 | **必选** |
+| 1.2 | 0.25d | ⭐⭐ | ✅ 字符串替换 | **必选** |
+| 1.3 | 0.5d | ⭐⭐⭐⭐ | ✅ Sprint 0.1 依赖 | **必选** |
+| 2.1 | 0.5d | ⭐⭐ | ✅ 简单 | **应选** |
+| 2.2 | 1.0d | ⭐⭐⭐ | ⚠️ cron 配置有风险 | **应选** |
+| 2.4 | 1.0d | ⭐⭐⭐ | ✅ 文档为主 | **应选** |
+
+### 4. Six-week cycles + Cool-down
+
+**v3.0 完整 6 周周期**：
+
+| Week | Phase | 内容 | 状态 |
+|:----:|-------|------|:----:|
+| W1 | Phase 0+1（短段）| 业务自评基础设施 + 业务闭环 P0 | ⏸️ 待开 |
+| W2 | Phase 2（短段剩余）| 业务优化 + 散户友好 | ⏸️ |
+| W3 | Phase 3（工程债）| CI 质量门 + 工程债 | ⏸️ |
+| W4 | Phase 3 续 | 散户友好 + 模块独立验证 | ⏸️ |
+| W5 | Phase 4（散户友好）| 5 skill 走查 + 知识库 | ⏸️ |
+| W6 | Phase 4 续 + Cool-down | 2 周冷却期开始 | ⏸️ |
+| W7-8 | Cool-down | 不接新活，修 bug，做 reflection | ⏸️ |
+
+### 5. Hill Chart（v3.0 进度可视化）
 
 ```
-                        ┌─────────────────────────────┐
-                        │ Phase 0: 业务自评基础设施     │
-                        │  A1: 建 business_check.py   │
-                        │  （0.25d 写 + 0.75d 跑分）   │
-                        └──────────────┬──────────────┘
-                                       │ 必须先有
-                                       ↓
-        ┌──────────────────────────────┴──────────────────────────────┐
-        │                                                              │
-        ↓                                                              ↓
-┌────────────────────┐                                       ┌─────────────────┐
-│ Phase 1: 业务闭环  │                                       │ Phase 1 副线    │
-│ A2: 修 D-013.3     │                                       │ A3: 更新 README │
-│   (test_run_eval)  │                                       │   (测试数 424)  │
-│ 0.5d               │                                       │ 0.25d           │
-└─────────┬──────────┘                                       └─────────────────┘
-          │
-          ↓ 必须先修
-┌─────────────────────────┐
-│ A4: 验证 4 维度跑通     │
-│   （拿到真业务自评 4 维度分）│
-│ 0.5d                   │
-└─────────┬───────────────┘
-          │
-          ↓ 有了真分
-          ┌───────────────────────────────────────────────┐
-          │ Phase 2-3: 业务优化 + 工程债（可并行）         │
-          │ B6 / B1 / C1 / C4 / C6 / D1 / D3 / D4         │
-          └───────────────────────────────────────────────┘
-
-
-并行任务（独立，可任何时候做）:
-- C4: __init__.py API docstring（1d）
-- C6: except 精确化（0.5d）
-- D1: decision_snapshot 散户解释（1d）
-- D3: 29 因子中文描述全检（1d）
-- D4: 钉钉推送模板（0.5d）
-- E2: pytest 卡死调查（1d）
-
-不做的（Won't）:
-- D5: 量化知识库深度内容
-- E1: Theme 4 根仓清理
-- B3: D-008 概率三元组（5d 大活，单开 Mission）
-- B5: D-011 止盈止损动态化（3d 大活）
+100% ┤              ╱───── Sprint 0.1 ✓ (短段)
+     │            ╱
+ 75% ┤          ╱───── Sprint 1.1 (修 D-013.3)
+     │        ╱
+ 50% ┤      ╱         Sprint 2.3 (D-009 阈值动态化) [Backlog]
+     │    ╱              ⚠️ 卡图顶，需 scope hammering（已决定不做了）
+ 25% ┤  ╱
+     │╱
+  0% ┤
+     └────────────────────────────
+      W1     W2     W3     W4     W5     W6
 ```
 
----
+**关键洞察**（Shape Up Ch 13）：横轴是 **position** 不是 time。同样 1 周可能前进 30% 或 5%。
 
-## 3. 短段路线图：1 周交付（v2.1 维护版）
+### 6. Circuit Breaker（熔断器）
 
-### Phase 0：业务自评基础设施（**1 人天**）
+| 触发条件 | 立即动作 |
+|----------|----------|
+| 任一 Sprint 引入 ≥2 个新 bug | 暂停新功能，回归 |
+| 任意 1 周延期 | 重新 Betting Table |
+| pytest 跌破 90% | 暂停新功能，只修 bug |
+| Rabbit hole 真实发生 | 按 SOP-08 8 节复盘 + 调范围 |
 
-#### Sprint 0.1：建 `scripts/business_check.py`（0.25d 写 + 0.75d 跑分）
+### 7. No backlogs
 
-| # | 任务 | 内容 | 时间 | 验收 |
-|:--:|------|------|:----:|------|
-| 0.1.1 | 写脚本骨架 | argparse + 4 维度函数 | 1h | 文件存在 |
-| 0.1.2 | 维度 1：数据完整性 | 跑 14 ETF 验证（持仓/池/价格/分数）| 1h | 自动断言 |
-| 0.1.3 | 维度 2：结果合理性 | 跑 daily 决策（BUY/HOLD/SELL 比例）| 1h | 自动断言 |
-| 0.1.4 | 维度 3：端到端可跑 | pytest + daily + run_eval | 1h | 全绿 |
-| 0.1.5 | 维度 4：文档对得上 | README 数字 vs 实测数字 | 0.5h | 自动对比 |
-
-**业务自评输出**（0~25 分 × 4 维度）：
-- 数据完整性：14/14 ETF + 价格完整 + 分数计算无 NaN
-- 结果合理性：BUY/HOLD/SELL 比例合理（不全部同一档）
-- 端到端可跑：pytest 100% + daily 跑通 + run_eval 跑通
-- 文档对得上：README 数字 = 实测数字
-
-**Sprint 0.1 验收**：
-- [ ] `python scripts/business_check.py` 跑出真分
-- [ ] 4 维度全打印
-- [ ] 总分 ≥80
-- [ ] commit + push
+- ❌ 不维护 backlog 列表
+- ✅ 只在 Betting Table 拍板
+- ✅ 超过 6 周不接 = "Maybe some day"
 
 ---
 
-### Phase 1：业务闭环 P0 债（**1.25 人天**）
+## Adjust to Your Size（1 人公司简化版）
 
-#### Sprint 1.1：修 D-013.3 test_run_eval 失败（0.5d）
+按 Shape Up Appendix B：
 
-| # | 任务 | 内容 | 时间 | 验收 |
-|:--:|------|------|:----:|------|
-| 1.1.1 | 读 `tests/unit/test_run_eval.py:81` | 找 n_etfs_tested=0 根因 | 0.5h | 根因明确 |
-| 1.1.2 | 读 `scripts/run_eval.py` 实际实现 | 看为什么返回 0 | 0.5h | 修复点明确 |
-| 1.1.3 | 修复（mock 数据/改测试/改实现 三选一）| 选最简 | 1h | pytest 全绿 424/424 |
-| 1.1.4 | 跑全量验证 | pytest -q | 0.5h | 无回归 |
-
-**Sprint 1.1 验收**：
-- [ ] pytest 424/424 全过
-- [ ] `test_run_eval.py::test_eval_returns_summary` 通过
-- [ ] commit + push
-
-#### Sprint 1.2：更新 README 数字（0.25d）
-
-| # | 任务 | 内容 | 时间 | 验收 |
-|:--:|------|------|:----:|------|
-| 1.2.1 | 找 README 中"217"出现处 | grep -n "217" | 0.1h | 位置清单 |
-| 1.2.2 | 改为真实数字 424/424 | 替换 | 0.1h | README 改完 |
-| 1.2.3 | 加 pytest 验证链接 | 跑一次确认 | 0.1h | 全绿 |
-
-**Sprint 1.2 验收**：
-- [ ] README 数字 = 424/424
-- [ ] commit + push
-
-#### Sprint 1.3：跑业务自评拿真分（0.5d）
-
-| # | 任务 | 内容 | 时间 | 验收 |
-|:--:|------|------|:----:|------|
-| 1.3.1 | 跑 `python scripts/business_check.py` | 4 维度同时跑 | 0.5h | 真分出 |
-| 1.3.2 | 记录到 `reports/2026-06-29_v3_baseline/SELF_EVAL.md` | 4 维度分 + 阻塞项 | 0.5h | 报告存 |
-| 1.3.3 | 不合格项 → 写债 | 列下一轮该修什么 | 0.5h | 债清单 |
-
-**Sprint 1.3 验收**：
-- [ ] 真分 ≥80
-- [ ] SELF_EVAL.md 入库
-- [ ] commit + push
-
-**Phase 1 总计**：1.25 人天（0.5+0.25+0.5）
+| 完整 Shape Up | 1 人公司简化 |
+|--------------|--------------|
+| 拍板会议 | ❌ Skip（1 人不需要）|
+| 团队独立 | ❌ Skip（1 人即团队）|
+| 拍板 Table 多人讨论 | ⚠️ 改为"问用户 1 次" |
+| **必须保留** | |
+| Shaping 4 步（特别是 Ch 5 de-risk）| ✅ 保留 |
+| Appetite 固定时间变量范围 | ✅ 保留 |
+| 6 周 cycle + 2 周冷却 | ✅ 保留（1 人更需要节奏）|
+| Hill Chart | ✅ 保留（1 人更要看图）|
+| Circuit Breaker | ✅ 保留（自我熔断）|
+| No-Gos 显式 | ✅ 保留（防止范围蔓延）|
 
 ---
 
-### Phase 2：业务优化 P1 债（**2 人天**）
+## Exception handling（异常处理）
 
-#### Sprint 2.1：D-012 HOLD 落 snapshot 完整字段（0.5d）
-
-| # | 任务 | 内容 | 时间 | 验收 |
-|:--:|------|------|:----:|------|
-| 2.1.1 | 读 HOLD 路径代码 | `run_daily.py` HOLD 分支 | 0.5h | 现状明确 |
-| 2.1.2 | 补 8 字段 | decision_snapshot | 1h | 全字段落库 |
-| 2.1.3 | 测试 | 跑一次 HOLD 决策 | 0.5h | snapshot 落库 |
-
-**Sprint 2.1 验收**：
-- [ ] HOLD 时 snapshot 8 字段全
-- [ ] commit + push
-
-#### Sprint 2.2：D-013.4 v2 daily cron 09:30 工作日（1d）
-
-| # | 任务 | 内容 | 时间 | 验收 |
-|:--:|------|------|:----:|------|
-| 2.2.1 | 用 `qwenpaw cron create` 建 cron | 09:30 工作日 | 0.5h | cron 创建 |
-| 2.2.2 | 测试（手动触发 + 验证日志）| bash run_and_log.sh daily | 1h | 跑通 |
-| 2.2.3 | 加 L326 检查（升级后重检 enabled）| MEMORY 教训 | 0.5h | 文档化 |
-
-**Sprint 2.2 验收**：
-- [ ] cron 创建并 enabled
-- [ ] 手动触发跑通
-- [ ] MEMORY.md 记录 L326
-- [ ] commit + push
-
-#### Sprint 2.3：D-009 决策阈值动态化（**2d 大活**，可拆）
-
-| # | 任务 | 内容 | 时间 | 验收 |
-|:--:|------|------|:----:|------|
-| 2.3.1 | PRD + 设计 | 3 档阈值 vs 动态阈值 | 1h | 设计文档 |
-| 2.3.2 | 跑回测对比 4 验证器 | 静态 vs 动态 | 1.5h | 报告 |
-| 2.3.3 | 选优 + 改代码 | 改 WeightScheme | 1.5h | 阈值类落地 |
-| 2.3.4 | 测试 | daily 跑通 | 1h | 无回归 |
-
-**Sprint 2.3 验收**：
-- [ ] 动态阈值类
-- [ ] 回测对比报告
-- [ ] commit + push
-
-**Phase 2 总计**：2 人天（0.5+1+2=3.5）→ **Phase 2 重排为 3.5d**
+| 场景 | 指引 |
+|------|------|
+| **团队 5+ 人** | 跳过 Adjust to Your Size，用完整 Shape Up |
+| **项目 < 1 周** | 不要用本路线图，用 Sprint 模板 |
+| **用户答不出 5 问** | 引导先答 Q1，不写路线图 |
+| **跨多产品** | 拆 2 个路线图分别跑 |
+| **SLO 跌破** | 暂停新功能，重评 Step 5 |
+| **新增 Must 任务** | 重新跑 RICE 评分 |
 
 ---
 
-### 短段总人天
+## 5 部分报告（Phaal 2004 标准）
 
-| Phase | 人天 |
-|------:|----:|
-| Phase 0 | 1.0 |
-| Phase 1 | 1.25 |
-| Phase 2 | 3.5 |
-| **小计** | **5.75 人天** |
+### 1. Technology identification and description
 
-按每天 2h 开发节奏 = **3 天**可完成（1 周内完成）
+| # | 技术领域 | 描述 | 状态 |
+|:--:|----------|------|:----:|
+| 1 | alpha（29 因子）| 决策核心 | 🟢 |
+| 2 | data_layer（15 表）| 唯一数据入口 | 🟡 |
+| 3 | risk（22 字段 9 步）| 持仓管理 | 🟢 |
+| 4 | execution（4 Repo）| 委托模式 | 🟢 |
+| 5 | monitor（4 文件）| 健康检查 + market_mode | 🟢 |
+| 6 | backtest | ComprehensiveValidator | 🟡 |
+| 7 | performance | 绩效分析 | 🔴 |
+| 8 | notify | 钉钉推送 | 🔴 |
+| 9 | scheduler | cron 配置 | 🔴 |
+| 10 | portfolio | 组合管理 | 🔴 |
+| 11 | universe | ETF 池管理 | 🔴 |
+| 12 | config | 常量配置 | 🔴 |
+| 13 | utils | 工具 | 🔴 |
+| 14 | rank | 排名 | 🔴 |
 
----
+### 2. Critical factors
 
-## 4. 长段路线图：v3.0 完整版（30 人天 / 6 周）
+| # | 因素 | 影响 |
+|:--:|------|------|
+| 1 | SQLite 唯一入口（规则 16）| 高 |
+| 2 | 业务代码走 API（规则 15）| 高 |
+| 3 | 止损/止盈优先（规则 17）| 高 |
+| 4 | 判断基于外部数据（规则 22）| 中 |
+| 5 | is_real 标记（规则 23）| 中 |
 
-### Phase 3：工程债（业务依赖时做）
+### 3. Unaddressed areas ⭐（**最重要**）
 
-| Sprint | 任务 | 人天 | RICE | 触发条件 |
-|:------:|------|:----:|-----:|----------|
-| 3.1 | C1: GitHub Actions CI | 1.0 | 8 | Phase 1 后必做 |
-| 3.2 | C4: 6 个空 `__init__.py` 补 API | 1.0 | 3 | API 用户需要时 |
-| 3.3 | C6: 4 个 except 精确化 | 0.5 | 6 | 任何修改前 |
-| 3.4 | E2: pytest 卡死调查 | 1.0 | 1.5 | CI 跑通后做 |
+显式列出**本次路线图没覆盖**：
 
-### Phase 4：散户友好（v3.0 用户体验）
+| # | 未覆盖领域 | 原因 | 影响 | 何时处理 |
+|:--:|------------|------|------|----------|
+| 1 | **实盘交易验证** | 模拟数据 is_real=0 | 真实盈亏未验证 | v4.0 |
+| 2 | **CI/CD（GitHub Actions）** | 不在本短段范围 | 回归风险高 | Sprint 3.1 |
+| 3 | **Dockerfile / Makefile** | 不在范围 | 部署效率低 | Sprint 3.4 |
+| 4 | **6 个空 `__init__.py` 补 API** | 不在范围 | OpenSSF 不达标 | Sprint 3.2 |
+| 5 | **8 个 print() → logger** | 不在范围 | 12-Factor XI 缺 | Sprint 3.3 |
+| 6 | **4 个 except 精确化** | 不在范围 | 异常吞掉 | Sprint 3.3 |
+| 7 | **performance 模块** | 未读 | 绩效分析黑盒 | 按需 |
+| 8 | **notify 模块** | 未亲眼验证推送 | 推送失败未知 | Sprint 2.2 |
+| 9 | **scheduler 模块** | cron 未建 | 自动化未启 | Sprint 2.2 |
+| 10 | **portfolio 模块** | 未读 | 组合管理黑盒 | 按需 |
+| 11 | **universe / config / utils / rank** | 未读 | 架构认知不全 | 按需 |
+| 12 | **5 skill 散户视角走查** | 缺视角 | 用户路径不清 | Sprint 2.4 |
+| 13 | **29 因子中文描述全检** | 部分有 | 散户可读性 | Sprint 2.4 |
+| 14 | **量化知识库深度内容** | 排 Won't | 用户学习价值 | v4.0 |
+| 15 | **Theme 4 根仓清理** | 排 Won't | 决策风险高 | - |
+| 16 | **Theme 5 pytest 卡死调查** | 排 Could | 已知有 workaround | Sprint 3.4 |
+| 17 | **9 维度业务自评 250 分** | 缺脚本 | 业务自评不严谨 | Sprint 0.1 后 |
+| 18 | **券商 API 接入** | 明确不做 | 用户自行下单 | - |
+| 19 | **LLM 推理** | 明确不做 | 因子逻辑代码化 | - |
+| 20 | **新框架（FastAPI/Django）** | 明确不做 | 保持 CLI + cron | - |
 
-| Sprint | 任务 | 人天 | RICE | 触发条件 |
-|:------:|------|:----:|-----:|----------|
-| 4.1 | D1: decision_snapshot 8 字段散户解释 | 1.0 | 8 | Phase 2 后 |
-| 4.2 | D3: 29 因子中文描述全检 | 1.0 | 5 | 任何时候 |
-| 4.3 | D4: 钉钉推送模板 | 0.5 | 10 | B1 cron 跑通后 |
-| 4.4 | D2: 5 skill 散户视角走查 | 1.5 | 1.67 | v3.0 验收前 |
+**最少应该包含的 3 类**：
+1. 未跑过的（听过没做）= #1, 7-13
+2. 明确不做的（scope boundaries）= #18-20
+3. 假设条件（如果假设错整个路线图作废）= 数据源稳定 / 1 人团队 / pytest 99.76% baseline
 
-### Phase 5：业务进阶（v3.0+ 增量）
+### 4. Implementation recommendations
 
-| Sprint | 任务 | 人天 | RICE | 触发条件 |
-|:------:|------|:----:|-----:|----------|
-| 5.1 | B6: D-012 HOLD 落 snapshot | 0.5 | 10 | Phase 2 |
-| 5.2 | B4: D-010 HOLD 触发细化 | 1.0 | 4 | D-009 后 |
-| 5.3 | E4: D-013.5 IC 季度重跑 | 2.0 | 4 | 每季度 |
-| 5.4 | C2/C3: Dockerfile + Makefile | 1.0 | 6 | CI 后 |
+**短段（1 周）实施顺序**（按依赖 DAG）：
 
-### Phase 6：v3.0+ 大活（不并发，单 Mission 跑）
+| 序 | Sprint | 时间 | 依赖 | 风险 |
+|:--:|--------|:----:|------|:----:|
+| 1 | Sprint 0.1 建 business_check.py | 1.0d | 无 | 中 |
+| 2 | Sprint 1.1 修 D-013.3 | 0.5d | 无 | 中 |
+| 3 | Sprint 1.2 更新 README | 0.25d | Sprint 1.1 跑通 | 极低 |
+| 4 | Sprint 1.3 跑业务自评拿真分 | 0.5d | Sprint 0.1 + 1.1 | 低 |
+| 5 | Sprint 2.1 D-012 HOLD 落 snapshot | 0.5d | 无 | 中 |
+| 6 | Sprint 2.2 cron 09:30 | 1.0d | 无 | 中 |
+| 7 | Sprint 2.4 decision_snapshot 散户解释 | 1.0d | Sprint 1.3 | 低 |
+| **小计** | - | **4.75d** | - | - |
 
-| Sprint | 任务 | 人天 | 优先级 | 备注 |
-|:------:|------|:----:|:------:|------|
-| 6.1 | D-008 概率三元组 | 5 | Could | 架构升级 |
-| 6.2 | D-011 止盈止损动态化 | 3 | Could | 持仓管理 |
-| 6.3 | D-013.5 IC 巡检自动化 | 2 | Should | 月度自动跑 |
+### 5. Technical recommendations
 
-**长段总人天**：~30 人天
-
----
-
-## 5. 不做的事（明确边界）
-
-按 Shape Up 反模式 + 防止范围蔓延：
-
-1. ❌ **不重写 v1 脚本** — 物理删除完成
-2. ❌ **不引入新框架**（FastAPI / Django 等）
-3. ❌ **不接 LLM 推理** — 因子逻辑代码化
-4. ❌ **不接券商 API** — 用户自行下单
-5. ❌ **不做 Theme 4 根仓清理**（E1 Won't）— 用户已下线决策风险高
-6. ❌ **不做 Theme 5 pytest 卡死调查**（E2 推到 Phase 3）— 已有单文件跑规避
-7. ❌ **不做量化知识库深度内容**（D5 Won't）— 5d 大活，价值低 RICE=1
-8. ❌ **不做 4 个未读模块独立跑过**（E3 Could）— 等需要时再跑
-
----
-
-## 6. 风险与回滚
-
-| 风险 | 等级 | 应对 | 回滚 |
-|------|:---:|------|------|
-| A1 业务自评脚本跑不出真分 | P1 | 设计时用 4 维度简单断言（不用 IC/IR）| 删脚本，回到文档自评 |
-| A2 修 D-013.3 引入回归 | P1 | 跑全量 pytest + daily | revert commit |
-| B1 cron 推送重复 | P2 | 加去重 + 幂等检查 | 删 cron |
-| C1 CI 跑通后慢 | P2 | 加 --no-cov 提速 | 关 CI |
-| D-009 阈值动态化引入过拟合 | P1 | OOS 验证 | 回滚到固定阈值 |
-| 路线图方向错 | P0 | 每 Sprint 1 跑 `腐化自检` | 整体回滚到 ITERATION_PLAN_20260623 |
-
----
-
-## 7. 验收标准（每 Sprint 通用）
-
-按 SOUL.md 规则 1（交付 4 项缺一不可）：
-
-1. ✅ **功能能跑** — pytest + 手动验证
-2. ✅ **测试通过** — 至少 1 个新测试 + 全量无回归
-3. ✅ **文档更新** — MEMORY.md 或 sprint-review
-4. ✅ **无重复问题** — 不重复造轮子
-
-按 SOUL.md 规则 7（6 维度自评 ≥90 优秀）：
-
-| 维度 | 满分 | 目标 |
-|------|-----:|-----:|
-| 设计文档输出 | 20 | ≥18 |
-| 调研参考来源 | 20 | ≥18 |
-| 按 SOP Phase 执行 | 20 | ≥18 |
-| 单元测试覆盖 | 15 | ≥13 |
-| 回归测试通过 | 15 | ≥13 |
-| Git 小步提交 | 10 | ≥9 |
-| **总计** | **100** | **≥90** |
-
-按 SOUL.md 规则 24（业务自评 4 维度 ≥80）：
-
-| 维度 | 满分 | 目标 |
-|------|-----:|-----:|
-| 数据完整性 | 25 | ≥20 |
-| 结果合理性 | 25 | ≥20 |
-| 端到端可跑 | 25 | ≥20 |
-| 文档对得上 | 25 | ≥20 |
-| **总计** | **100** | **≥80** |
+| # | 建议 | 影响 | 优先级 | Phase |
+|:--:|------|------|:------:|-------|
+| 1 | 加 GitHub Actions CI | 防回归 | P1 | Phase 3 |
+| 2 | 加 Dockerfile | 部署效率 | P2 | Phase 3 |
+| 3 | 加 Makefile | 入口统一 | P2 | Phase 3 |
+| 4 | 6 个 `__init__.py` 补 API | OpenSSF 100% | P2 | Phase 3 |
+| 5 | 8 个 print → logger | 12-Factor XI | P3 | Phase 3 |
+| 6 | 4 个 except 精确化 | 异常处理 | P3 | Phase 3 |
+| 7 | 9 维度业务自评脚本 | 业务自评严谨 | P2 | Sprint 0.1 后 |
+| 8 | 4 个未读模块独立验证 | 架构认知 | P3 | 按需 |
 
 ---
 
-## 8. 业界参考（标来源）
+## 与 ITERATION_PLAN_20260623 + ROADMAP_v3 v1.0 的差异
 
-| # | 实践 | URL | 用途 |
-|---|------|-----|------|
-| 1 | RICE Scoring | https://en.wikipedia.org/wiki/RICE_score | 优先级评分 |
-| 2 | MoSCoW Method | https://en.wikipedia.org/wiki/MoSCoW_method | Must/Should/Could/Won't |
-| 3 | WSJF (SAFe) | https://scaledagileframework.com/wsjf/ | 加权最短作业优先 |
-| 4 | OKR | https://en.wikipedia.org/wiki/OKR | 目标与关键结果 |
-| 5 | Shape Up | https://basecamp.com/shapeup | 6 周周期 + 冷却期 |
-| 6 | DORA Metrics | https://dora.dev/ | 部署效能 4 指标 |
-| 7 | SRE Golden Signals | https://sre.google/sre-book/monitoring-distributed-systems/ | 监控 4 信号 |
-| 8 | Kirkpatrick Model | https://en.wikipedia.org/wiki/Kirkpatrick_model | 业务自评 4 维度 |
-| 9 | 12-Factor App | https://12factor.net/ | 应用 12 要素 |
-| 10 | OpenSSF Best Practices | https://bestpractices.coreinfrastructure.org/ | 安全治理 |
-| 11 | Atlassian Sprint Retrospective | https://www.atlassian.com/team-playbook/plays/retrospective | 复盘 4 步 |
-| 12 | Scrum Guide 2020 §5.3 | https://scrumguides.org/scrum-guide.html#sprint-retrospective | Sprint 复盘 |
+| 维度 | ITERATION_PLAN_20260623 | ROADMAP_v3 v1.0（凑的）| **本文（Skill 重写）** |
+|------|------------------------|------------------------|------------------------|
+| **方法论** | 5 Theme 直觉 | RICE/MoSCoW/WSJF 评分 | **Phaal 10 步 + Shape Up 7 元素**（业界标准）|
+| **业务债** | 散落 | 24 任务 RICE 评分 | **4 Must + 3 Should + DAG 依赖** |
+| **工程债** | 主题化 | 业务依赖时做 | **Phaal Step 8 替代方案 + 优先级** |
+| **5 部分报告** | ❌ | ❌ | ✅（特别是 Unaddressed areas 显式 20 项）|
+| **Hill Chart** | ❌ | ❌ | ✅（ASCII 山形图）|
+| **Exception handling** | ❌ | ❌ | ✅（7 场景 + Rule of thumb）|
+| **Re-evaluate 触发条件** | ❌ | ❌ | ✅（8 个触发 + 局部重做）|
+| **No backlogs 显式** | ❌ | ❌ | ✅ |
+| **Adjust to Your Size** | ❌ | ❌ | ✅（1 人公司简化版）|
 
 ---
 
-## 9. 与 ITERATION_PLAN_20260623 的差异
+## 立即行动
 
-| 项 | ITERATION_PLAN_20260623 | ROADMAP_v3（本文）| 差异原因 |
-|----|------------------------|------------------|----------|
-| **方法论** | 5 大 Theme（凭直觉）| RICE + MoSCoW + WSJF | 按业界方法 |
-| **优先级** | Theme 1~5 顺序固定 | RICE 评分排序 | 业务价值优先 |
-| **业务债** | 散落 | 显式 P0/P1/P2 | 业务闭环优先 |
-| **工程债** | 主题化（Theme 2/3）| 业务依赖时做 | 业务优先于工程 |
-| **时间维度** | 单段（未来 1~2 周）| 短段（1 周）+ 长段（6 周）| 双段可调 |
-| **评估** | 9 维度 250 分 | RICE/MoSCoW/WSJF + 6 维自评 + 业务 4 维 | 多维评分 |
-| **不做的事** | 7 节"不做事"清单 | 5 节边界 + Won't 任务 | 显式边界 |
-| **依赖图** | 无 | DAG | 强制约束 |
+**Sprint 0.1 任务卡**（已就绪）：
 
----
+- 做什么：建 `scripts/business_check.py`（4 维度业务自评）
+- 为什么：Mission 验收硬性条件（SOUL.md 规则 24）
+- 边界：只跑 4 维度简单断言，不做 IC/IR 复杂评估
+- 风险：脚本写错跑不出真分 → try-except + 友好报错
+- 验收：`python scripts/business_check.py` 输出 4 维度分 + 总分
+- 估时：1 人天
+- 依赖：无
+- SOP：SOP-02 6 阶段
 
-## 10. 短段执行顺序（**Sprint 0.1 必须先做**）
-
-| 顺序 | Sprint | 估时 | 累计 | 风险 |
-|:----:|--------|:----:|:----:|:----:|
-| 1 | **Sprint 0.1** 建 business_check.py | 1.0d | 1.0 | 低（独立）|
-| 2 | Sprint 1.1 修 D-013.3 | 0.5d | 1.5 | 中（改测试）|
-| 3 | Sprint 1.2 更新 README | 0.25d | 1.75 | 极低 |
-| 4 | Sprint 1.3 跑业务自评 | 0.5d | 2.25 | 低（有了工具）|
-| 5 | Sprint 2.1 D-012 HOLD 落 snap | 0.5d | 2.75 | 低 |
-| 6 | Sprint 2.2 cron 09:30 | 1.0d | 3.75 | 中（cron 配错）|
-| 7 | Sprint 2.3 D-009 阈值动态化 | 2.0d | 5.75 | **高**（架构改）|
-
-**短段总人天：5.75d**（按每天 2h ≈ 3 天开发 + 1 天测试 = 1 周内）
-
----
-
-## 11. 立即行动
-
-**下一个 Sprint**（Sprint 0.1）开 Sprint 任务卡：
-
-- [ ] **任务卡 #001**：建 `scripts/business_check.py`
-  - **做什么**：4 维度业务自评脚本（数据完整性/结果合理性/端到端可跑/文档对得上）
-  - **为什么**：业务自评 4 维度 ≥80 是 Mission 验收的硬性条件（SOUL.md 规则 24）
-  - **边界**：只跑 4 维度简单断言，不做 IC/IR 复杂评估
-  - **风险**：脚本写错跑不出真分 → 加 try-except + 友好报错
-  - **验收**：`python scripts/business_check.py` 输出 4 维度分 + 总分
-  - **估时**：1 人天
-  - **依赖**：无
-  - **SOP**：SOP-02 6 阶段
+**Pitch Card 0.1 完整版**（见下一个 commit `pitch_cards/sprint_0_1.md`）
 
 ---
 
 **作者**：福猫管家 🐱
-**日期**：2026-06-29 12:30
-**版本**：v3.0-roadmap-draft
-**状态**：📋 待用户确认
-**下一步**：开 Sprint 0.1 任务卡
+**日期**：2026-06-29 20:00
+**方法论**：roadmap-methodology Skill v1.1（8.95/10 A 级）
+**状态**：📋 待用户确认 + 开 Sprint 0.1
