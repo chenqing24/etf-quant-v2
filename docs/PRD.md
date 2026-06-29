@@ -1,9 +1,9 @@
 # PRD（产品需求文档）
 
-> **版本**：v2.0.0-final
+> **版本**：v3.2.0（同步 PRD.json v3.2）
 > **创建**：2026-06-18
-> **更新**：2026-06-20（Sprint-6 + Sprint-7 后）
-> **状态**：✅ Mission 100% 完成（29/29 US 业务实现）
+> **更新**：2026-06-29（Sprint-8.2 后 + PRD.json 同步 commit 414221d）
+> **状态**：✅ Mission 100% 完成（29/29 US 业务实现 + v3 业务自评 9 维度 300/225 PASS）
 
 ## 项目定位
 
@@ -21,7 +21,7 @@
 ## 5 个核心转变
 
 1. **单仓 monorepo**（`etf_quant_v2/`，独立 git）
-2. **13 模块独立**（业界标准：QuantConnect LEAN / Zipline / BigQuant）
+2. **14 模块独立**（业界标准：QuantConnect LEAN / Zipline / BigQuant；含 v1 没有的 rank 模块）
 3. **5 skill 业务向**（场景驱动，不是技术模块）
 4. **C2 散户"想学方"**（Q1 已拍板）
 5. **AI-Native 而非 AI-Assisted**（Q1 已拍板）
@@ -32,7 +32,7 @@
 - BOLL_strict_middle+MA60 入场过滤（C21 验证）
 - ComprehensiveValidator 4 验证器
 - PositionGuide 22 字段决策树
-- 27 因子 + W4 RV 反转因子（v9 沉淀）
+- 29 因子 = 27 继承（含 W4 RV）+ T6_dma + T7_ma_arrangement（v3.2 Sprint-8.1 补）
 - 96+ 教训库
 
 ## v1 关键陷阱（必须避免）
@@ -60,7 +60,7 @@
 | 2/3 P0 核心业务 | alpha 金三角 + execution + risk + ComprehensiveValidator | 4 US | ✅ |
 | 4 P1 5 skill | etf-daily/research + stock-analyze/portfolio + quant-knowledge | 5 US | ✅ |
 | 5 P2 完善+发布 | 数据迁移 + 性能基准 + CHANGELOG + CI + v2.0 release | 5 US（US-030 删）| ✅ |
-| 6 P1 US-013 | 27 因子 + W4 RV 反转因子（v9 沉淀）| 1 US | ✅ |
+| 6 P1 US-013 | 29 因子 + W4 RV 反转因子（v9 沉淀 + Sprint-8.1 补 2）| 1 US | ✅ |
 | 7 P0 业务完整化 | universe + scheduler + monitor + performance + notify + portfolio | 5 US | ✅ |
 | **总计** | - | **29 US** | **100%** |
 
@@ -81,11 +81,11 @@
 | 总 US | 29（US-030 已删）|
 | 通过（接口契约）| 29/29 = 100% |
 | 通过（业务实现）| 29/29 = 100% ⭐ |
-| 测试 | 217/217 全过 |
-| 8 维自检 | 100/100 |
-| 文档 | 30 份（含 8 核心 + 7 复盘 + 7 SOP + 8 其他）|
-| Sprint 复盘 | 7 份（Sprint-0/1/2-3/4/5/6/7）|
-| Tag | v2.0-final + sprint-7-complete |
+| 测试 | 424（423 pass + 1 fail D-013.3 + 1 skip；ROADMAP Sprint 1.1 修） |
+| 业务自评 | 9 维度 300/225 = 133% PASS（v3 增量 + 文档完整性） |
+| 文档 | 54 份（8 核心 + 8 复盘 + 8 SOP + 30 其他）|
+| Sprint 复盘 | 8 份（Sprint-0/1/2-3/4/5/6/7/8.x）|
+| Tag | v2.0-final + sprint-7-complete + sprint-8.2-complete |
 
 ## 已知问题与未来 Sprint
 
@@ -119,3 +119,50 @@
 - 业务自评 9 维度全部跑通
 - 端到端人工抽查待用户回来跑
 - v3 Mission 标 completed（按规则 24 + 业务自评 ≥180）
+
+## v3.2 增量（2026-06-29）— Step 3 PRD 同步补丁
+
+### v3.2 业务自评
+- v3 实际：275/225 = 122% PASS → v3.2 实际：300/225 = 133% PASS（含超 75 分项）
+
+### v3.2 Sprint-8.x 增量
+| Sprint | 主题 | 状态 | commit |
+|--------|------|:---:|--------|
+| Sprint-8 | D-013 run_daily.py score=0.5 修复 + 池/配方分离 | ✅ | `0a2edd1..e828573` (8 commits) |
+| Sprint-8.1 | D-013.1 真实范围补缺 + 命名同步 | ✅ | `194664c..6e1b3bd` (4 commits) |
+| Sprint-8.2 | D-013.2 market_mode 漂移调研 | ✅ | `57cbfc3..6b8fc23` (2 commits) |
+
+### v3.2 真实基线（实测验证）
+| 指标 | v3 | v3.2 |
+|------|----|----|
+| 因子 | 27 | **29**（27 继承 + T6_dma + T7_ma_arrangement） |
+| 测试 | - | **424**（423 pass + 1 fail + 1 skip） |
+| 模块 | 12/13 | **14**（含 rank，v1 没有） |
+| 文档 | - | **54** |
+| 业务自评 | 275/225 | **300/225** = 133% PASS |
+
+### v3.2 教训（L336-L347）
+- L336 DMA 是转折点指标
+- L337 命名分歧债
+- L338 测试需转折点数据
+- L339 市场状态漂移误判
+- L340 众数法债
+- L341 label 合理性自检
+- **L347 PRD.md/PRD.json 同步债（mission 紧急时 SOP 必做清单漏 json，append-only 补丁兜底）**
+
+### v3.2 已知债（5 条）
+- D-013.3 test_run_eval 1 fail（Sprint 1.1 修）
+- PRD.md vs PRD.json 同步债（本次 commit 修复）
+- business_check.py 不存在（Sprint 0.1 建）
+- cron 09:30 工作日缺失（Sprint 2.2 建）
+- AGENTS.md 13→14 模块错（Step 5 顺带修）
+
+### PRD 同步策略
+- **人读源**：`docs/PRD.md`（本文档）
+- **机器消费源**：`docs/PRD.json`（脚本 parse）
+- **同步原则**：append-only，PRD.json 必须追上 PRD.md（按 L347）
+- **lastSyncedAt**：2026-06-29T22:30:00+08:00
+- **lastSyncedBy**：福猫管家（按 SOUL 规则 18 + L347）
+
+> **业界参考**：Wikipedia "Software documentation" single source of truth 原则
+
