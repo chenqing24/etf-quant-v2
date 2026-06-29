@@ -114,11 +114,11 @@ etf_quant_v2/
 详见 `v2-roadmap/notes/10_lessons_curated.md`
 
 **金 5 教训**：
-- L211：机制层 > AI 自觉
-- L225：alpha 真实来源（不是 4 因子，是入场过滤 + 永远满仓）
-- L222：cron 推送分流（target-session=WoXtGw==）
-- L101：多执行源无标识
-- L209：8 维度腐化自检
+- L211：high 优先级 TODO 必须有 due_at
+- L225：alpha 来源修正（入场过滤 + 永远满仓）
+- L222：qwenpaw cron 用 target-session 分流推送
+- L101：多执行源无标识 = 串扰风险窗口
+- L209：LLM 智能腐化 8 维度自检
 
 ## 进度
 
