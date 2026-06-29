@@ -5,6 +5,66 @@
 ## [Unreleased]
 
 ### Added
+- **v3.0 路线图 + Skill 化**（2026-06-29）
+  - `docs/ROADMAP_v3.md` v2.0（按 Phaal 2004 + Shape Up 2019 业界标准重写，442 行）
+  - **roadmap-methodology** 新 Skill（跨项目通用方法论，Phaal 10 步 + Shape Up 7 元素，commit `fab3bcd`）
+  - Skill v1.1 升级（按 skill-evaluator 8 维度评估 8.95/10 A 级，commit `7d0ca25`）
+  - MEMORY.md §十一 跨项目方法论 + 教训 L342-L346
+  - README.md 5 教训描述修正（按实测验证，commit `7a59e3f`）
+- **D-007 60min 因子细化**（2026-06-29，6 commit）
+  - C0 数据层：`write_60min()` + `write_60min_batch()`（27,506 条入库）
+  - C1 H1 intraday_trend（IR=4.65 极显著）
+  - C2 H2 volume_breakout
+  - C3 H3 boll_width_pct（IR=1.62 显著）
+  - C4 H4 price_volume_corr
+  - C5 eval pipeline + IC 评估 + 报告
+- **Sprint-8 D-013 daily 8 因子打分**（2026-06-28，8 commit）
+  - 修 P0 占位符 bug（BUY 决策 score 全 0.5 → 0.52~0.73 区分度强）
+  - FactorSet / WeightScheme / Scorer 三层架构
+  - HOLD 分支也跑 8 因子打分（候选给用户看）
+  - SOP_08_REVIEW 创建（复盘 8 节模板）
+- **Sprint-8.1 D-013.1 DMA/FIB 入库**（2026-06-28，4 commit）
+  - T6 DMA 因子（IC=0.0476）
+  - T7 MA 排列因子（IC=-0.1819）
+  - FACTOR_REGISTRY 27 → 29
+  - 8 单测全过
+- **D-013.2 漂移债调研关闭**（2026-06-29）
+  - 482 天 3 方案验证：A 现状 13 翻转 / 27.8d 段长（**无漂移**）
+  - 关闭债项 + 写 3 教训（L339-L341）
+- **Sprint-8.2 review + M1-M6 方法论**（2026-06-29，2 commit）
+  - Sprint-8.2 review（8 节结构化复盘，63/100 自评）
+  - MEMORY.md §八"可复用方法 M1-M6"（债项先验真伪 / 方案对比 ≥3 / label 自检 / 引用可验证 / 配置验证生效 / 35min 内反债关闭）
+
+### Changed
+- **测试数 217 → 424**（实测 2026-06-29，含 Sprint-7~8.2 新增 207 测试）
+- **模块数 12/13 → 14**（新增 `src/etf_quant/rank/` 模块）
+- README 数字全面更新（测试数 / Sprint / 模块数 / 教训描述）
+- 决策日志落库结构（decision_snapshot 8 JSON 字段全补齐）
+
+### Fixed
+- **D-013.3 已知 1 测试失败**（`test_run_eval.py::TestRunEval::test_eval_returns_summary`，n_etfs_tested=0 ≥ 14 失败，Sprint 1.1 待修）
+- README 5 教训描述错（按 L346 教训：事实性文档必实测验证）
+- MEMORY.md 误删 1315 行（commit `710bbbf` 误操作 + `315dbd1` 回滚 + L345 教训：edit_file last-occurrence 风险）
+
+### Security
+- pre-commit 钩子真实验证 4 条硬错误（L241 教训，沿用）
+
+### Lessons (L336-L346)
+- L336: DMA 公式稳态恒负，是转折点指标非趋势强度
+- L337: Sprint 必须有端到端跑分验证（不是局部）
+- L338: 技术指标测试必须用"带转折点"数据
+- L339: 债项描述必须先验真伪，不能凭印象修复
+- L340: 业界"多标投票"假设 A 股不成立，14 行业 ETF 凑不齐 70%
+- L341: label 窗口/阈值决定方案排序，20d/±1.5% vs 60d/±3% 排序不同
+- L342: 方法论路线图必须先调研业界标准再写（Phaal/Shape Up）
+- L343: 跨项目方法论固化 = 新 SKILL，不属本项目（Anthropic 3 级渐进）
+- L344: 自评必须区分业界标准 vs 内部 SOUL 标准
+- L345: 编辑既有大文件必须 append-only，禁止 edit_file 修改既有章节
+- L346: 编写 README 等事实性文档前必须实测验证关键事实，不能凭印象
+
+## [v3.2] - 2026-06-29 — Sprint-8.x + D-007 + roadmap-methodology skill
+
+### Added
 - **Sprint-7 业务完整化**：5 模块业务实现 + 8 核心文档 + 4 项 P1 改进
   - universe/loader.py：ETFListLoader（1486 ETF 加载、14 核心、40 参考）
   - scheduler/cron.py：CronSync（封装 qwenpaw cron API，4 默认 jobs）
