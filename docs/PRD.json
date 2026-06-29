@@ -618,7 +618,8 @@
       "L338",
       "L339",
       "L340",
-      "L341"
+      "L341",
+      "L347"
     ],
     "knownDebt": [
       "D-013.3 test_run_eval 1 fail（Sprint 1.1 修）",
@@ -747,5 +748,18 @@
     "syncPolicy": "append-only，PRD.json 必须追上 PRD.md（L347 教训）",
     "lastSyncedAt": "2026-06-29T22:30:00+08:00",
     "lastSyncedBy": "福猫管家（按 SOUL 规则 18 + L347）"
+  },
+  "knownLessons": {
+    "L286": "因子入库必带 IC（规则 27 阻断式）",
+    "L287": "季度 IC 巡检（US-010 实施）",
+    "L288": "因子命名必带 aliases 业界别名（规则 28）",
+    "L295": "业务自评缺\"文档完整性\"维度（v3 修正）",
+    "L336": "DMA 是转折点指标",
+    "L337": "命名分歧债",
+    "L338": "测试需转折点数据",
+    "L339": "市场状态漂移误判",
+    "L340": "众数法债",
+    "L341": "label 合理性自检",
+    "L347": "PRD.md/PRD.json 同步债（mission 紧急时 SOP 必做清单漏 json，append-only 补丁兜底）"
   }
 }
