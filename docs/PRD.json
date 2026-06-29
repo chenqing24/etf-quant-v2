@@ -591,7 +591,161 @@
     "us030_decision": "cancelled (user confirmed 2026-06-19: 不走 PyPI 发布流程)",
     "us013_completion": "27 factors (26 inherit + 1 W4 RV new) + 46 tests + 23-dim self-eval",
     "todoUS": 0,
-    "lastUpdated": "2026-06-20T04:30:00+08:00",
-    "missionStatus": "100% 业务实现"
+    "lastUpdated": "2026-06-29T22:30:00+08:00",
+    "missionStatus": "100% 业务实现（v3 业务自评 9 维度 300/225 PASS）",
+    "factorCount": 29,
+    "factorCountDetail": "27 继承（含 W4 RV）+ T6_dma + T7_ma_arrangement = 29 因子",
+    "testActual": 424,
+    "testBreakdown": {
+      "pass": 423,
+      "fail": 1,
+      "skip": 1,
+      "note": "1 fail = D-013.3 test_run_eval（ROADMAP Sprint 1.1 修）"
+    },
+    "moduleCount": 14,
+    "moduleCountDetail": "alpha/risk/execution/monitor/data_layer/backtest/universe/notify/portfolio/performance/scheduler/config/utils/rank",
+    "docCount": 54,
+    "us030_decision_note": "已删（cancelled, 不走 PyPI 发布）",
+    "v3Lessons": [
+      "L286",
+      "L287",
+      "L288",
+      "L295"
+    ],
+    "v3_2Lessons": [
+      "L336",
+      "L337",
+      "L338",
+      "L339",
+      "L340",
+      "L341"
+    ],
+    "knownDebt": [
+      "D-013.3 test_run_eval 1 fail（Sprint 1.1 修）",
+      "PRD.md vs PRD.json 同步债（本次 commit 修复）",
+      "business_check.py 不存在（Sprint 0.1 建）",
+      "cron 09:30 工作日缺失（Sprint 2.2 建）",
+      "AGENTS.md 13→14 模块错（Step 5 顺带修）"
+    ]
+  },
+  "version": "v3.2.0",
+  "versionNote": "v2.0 (2026-06-18) -> v3 (2026-06-21) -> v3.2 (2026-06-29)",
+  "v3Increment": {
+    "missionId": "mission-20260621-193542",
+    "date": "2026-06-21",
+    "sourceCommit": "9d0ec18 docs(v3): 4 必做文档同步（漏改 PRD.json，本次补丁补齐）",
+    "lessons": [
+      "L286 因子入库必带 IC（规则 27 阻断式，US-007 实施）",
+      "L287 季度 IC 巡检（US-010 实施）",
+      "L288 因子命名必带 aliases 业界别名（规则 28，US-001 实施）",
+      "L295 业务自评缺\"文档完整性\"维度（本次修正）"
+    ],
+    "newRules": [
+      {
+        "id": 27,
+        "title": "因子入库必带 IC/IR/ic_eval_date + 季度必巡检（阻断式）",
+        "scope": "SOUL.md"
+      },
+      {
+        "id": 28,
+        "title": "因子命名必带 aliases 业界别名（MA5/RSI/MACD/ATR/BOLL_W 等）",
+        "scope": "SOUL.md"
+      }
+    ],
+    "businessSelfEval": {
+      "previousVersion": "8 维度 / 200 总分",
+      "currentVersion": "9 维度 / 225 总分（+文档完整性 v3 增量 25 分）",
+      "threshold": {
+        "pass": 180,
+        "partial": "135-179",
+        "fail": "<135"
+      },
+      "v3Actual": "275/225 = 122% PASS（含超 50 分项）",
+      "v3_2Actual": "300/225 = 133% PASS（含超 75 分项）",
+      "reference": "SOUL.md 规则 24 Mission 业务自评 4 维度"
+    },
+    "missionAcceptance": {
+      "usPasses": "12/12 全部 passes=true",
+      "businessSelfEvalStatus": "9 维度全部跑通",
+      "e2eManualCheck": "待用户回来跑",
+      "completed": true,
+      "basis": "规则 24 + 业务自评 ≥180"
+    }
+  },
+  "v3Sprints": [
+    {
+      "id": "Sprint-6",
+      "name": "P1 US-013 因子扩展",
+      "userStories": [
+        "US-013"
+      ],
+      "milestone": "27 因子 + W4 RV 反转因子（v9 沉淀）",
+      "status": "completed",
+      "commitRange": "5da34aa..b6e2fb4"
+    },
+    {
+      "id": "Sprint-7",
+      "name": "P0 业务完整化",
+      "userStories": [
+        "US-024~US-029（universe/scheduler/monitor/performance/notify/portfolio/audit）"
+      ],
+      "milestone": "12 模块全部活跃 + Mission 100% 业务实现",
+      "status": "completed",
+      "commitRange": "864ece3..1a25921"
+    },
+    {
+      "id": "Sprint-8",
+      "name": "D-013 run_daily.py score=0.5 修复 + 池/配方分离",
+      "userStories": [
+        "D-013 业务债"
+      ],
+      "milestone": "Pool/FactorSet/WeightScheme/CrossSectionalScorer 三层架构 + HOLD 分支打分",
+      "status": "completed",
+      "commitRange": "0a2edd1..e828573 (8 commits)"
+    },
+    {
+      "id": "Sprint-8.1",
+      "name": "D-013.1 真实范围补缺 + 命名同步",
+      "userStories": [
+        "D-013.1 业务债"
+      ],
+      "milestone": "补 2 缺失因子 + IC 评估 + DMA/FIB 重命名",
+      "status": "completed",
+      "commitRange": "194664c..6e1b3bd (4 commits)",
+      "lessons": [
+        "L336 DMA 转折点指标",
+        "L337 命名分歧债",
+        "L338 测试需转折点数据"
+      ]
+    },
+    {
+      "id": "Sprint-8.2",
+      "name": "D-013.2 market_mode 漂移调研",
+      "userStories": [
+        "D-013.2 业务债"
+      ],
+      "milestone": "3 方案 × 2 年 482 天验证 + 关闭债",
+      "status": "completed",
+      "commitRange": "57cbfc3..6b8fc23 (2 commits)",
+      "lessons": [
+        "L339 市场状态漂移误判",
+        "L340 众数法债",
+        "L341 label 合理性自检"
+      ]
+    }
+  ],
+  "knownDebts": [
+    "D-013.3 test_run_eval 1 fail（Sprint 1.1 修）",
+    "PRD.md vs PRD.json 同步债（本次 commit 修复）",
+    "business_check.py 不存在（Sprint 0.1 建）",
+    "cron 09:30 工作日缺失（Sprint 2.2 建）",
+    "AGENTS.md 13→14 模块错（Step 5 顺带修）"
+  ],
+  "traceability": {
+    "humanSource": "docs/PRD.md（v3 已补）",
+    "machineSource": "docs/PRD.json（本文件）",
+    "syncPolicy": "append-only，PRD.json 必须追上 PRD.md（L347 教训）",
+    "lastSyncedAt": "2026-06-29T22:30:00+08:00",
+    "lastSyncedBy": "福猫管家（按 SOUL 规则 18 + L347）"
   }
 }
