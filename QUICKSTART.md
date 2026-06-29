@@ -24,7 +24,7 @@ pip install -e ".[dev]"
 **验证**：
 ```bash
 python3 -c "from etf_quant.alpha.factors import FACTOR_REGISTRY; print(f'✅ {len(FACTOR_REGISTRY)} 因子已注册')"
-# 期望输出：✅ 28 因子已注册
+# 期望输出：✅ 29 因子已注册（27 daily + T6 DMA + T7 MA 排列）
 ```
 
 ---
@@ -114,7 +114,7 @@ python3 scripts/run_real_backtest.py all
 
 | 你想 | 看哪里 |
 |------|--------|
-| 理解 27 因子含义 | [docs/SKILL_USER_GUIDE.md](docs/SKILL_USER_GUIDE.md) |
+| 理解 29 因子含义 | [docs/SKILL_USER_GUIDE.md](docs/SKILL_USER_GUIDE.md) |
 | 看策略回测历史表现 | [scripts/run_real_backtest.py](scripts/run_real_backtest.py) |
 | 调整因子权重 | [configs/factor_weights.yaml](configs/factor_weights.yaml) |
 | 跑 examples 案例 | `examples/` 目录（5 个 Jupyter notebook）|

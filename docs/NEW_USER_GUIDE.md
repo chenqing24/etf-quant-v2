@@ -14,7 +14,7 @@
 | 步 | 动作 | 触发词 | 命令 | 验证点 |
 |:--:|------|--------|------|--------|
 | **0** | 环境检查 | - | `python3 scripts/...` 见下文 | 软链接 + DB + Python 就绪 |
-| **1** | 跑测试基线 | "跑测试" | `pytest tests/ --ignore=tests/benchmark` | **217 passed** |
+| **1** | 跑测试基线 | "跑测试" | `pytest tests/ --ignore=tests/benchmark` | **423/424 passed**（2026-06-29 实测，1 已知失败 D-013.3）|
 | **2** | 量化知识库 | "量化策略" / "教训" | `quant-knowledge skill` | 1 策略 + 123 教训 + 12 参考 |
 | **3** | ETF 每日决策 | "ETF 决策" / "跑 ETF" | `etf-daily daily` | 11 字段决策报告 |
 | **4** | ETF 深度研究 | "ETF 验证" / "评分" | `etf-research validate` | 4 验证器分数 |
@@ -78,7 +78,7 @@ from etf_quant.data_layer.writer import DataWriter
 | `daily` | 69,480 | 日线行情（OHLCV） |
 | `etf_names` | 1,486 | ETF 元数据（14 核心 + 40 参考） |
 | `stock_info` | 66 | 个股基本信息 |
-| `trade_history` | 3 | 交易记录（is_real 区分真假盘） |
+| `trade_history` | 4 | 交易记录（2 real + 2 paper，is_real 区分真假盘）|
 | `decision_snapshot` | 4 | 决策快照 |
 | `positions` | 1 | 当前持仓 |
 | `etf_name_metrics` | 0 | ETF 名称指标（待填充） |
@@ -110,13 +110,14 @@ python3 -m pytest tests/ --ignore=tests/benchmark --tb=no
 ........................................................................ [ 66%]
 ........................................................................ [ 99%]
 .                                                                        [100%]
-217 passed in 138.13s (0:02:18)
+423 passed, 1 failed, 1 skipped in 95.32s
 ```
 
 ### 教学点
-- **217 个测试 = 100% 通过**（unit 159 + integration 32 + regression 26）
+- **424 个测试 = 423 通过 + 1 已知失败 + 1 skip**（unit + integration + regression + alpha/sixty_min）
+- **已知失败 D-013.3**：`test_run_eval.py::TestRunEval::test_eval_returns_summary`（n_etfs_tested=0 ≥ 14 失败，Sprint 1.1 待修）
 - **不跑 benchmark**：5 个 pytest-benchmark 用例需要额外依赖
-- **2 分 18 秒**：可接受范围
+- **~1.5 分钟**：可接受范围
 
 ### 如果失败
 ```bash
@@ -191,26 +192,31 @@ python3 ../skills/quant-knowledge/scripts/run_knowledge.py reference
 python3 ../skills/etf-daily/scripts/run_daily.py daily
 ```
 
-### 完整输出示例（真实跑通）
+### 完整输出示例（2026-06-29 真实跑通）
 
 ```json
 {
   "model_name": "v2_sop",
   "strategy_name": "C21Strategy",
-  "timestamp": "2026-06-20T22:29:22",
-  "market_mode": "range_bound",
-  "decision": "HOLD",
-  "buy_candidates": [],
+  "timestamp": "2026-06-29T11:57:13",
+  "market_mode": "trend_up",
+  "decision": "BUY",
+  "buy_candidates": [
+    {"code": "520900", "score": 0.7327, "rank": 1},
+    {"code": "512800", "score": 0.7173, "rank": 2},
+    {"code": "512200", "score": 0.6712, "rank": 3},
+    {"code": "515650", "score": 0.6365, "rank": 4},
+    {"code": "515790", "score": 0.5212, "rank": 5}
+  ],
   "sell_candidates": [],
-  "holdings_count": 1,
-  "holdings_detail": [
-    {"code": "512170"}
-  ],
-  "data_freshness": "距最新数据 4229 分钟",
+  "holdings_count": 0,
+  "holdings_detail": [],
+  "data_freshness": "距最新数据 5037 分钟",
   "warnings": [
-    "数据已过期 4229 分钟（阈值 80）"
+    "数据已过期 5037 分钟（阈值 1500）",
+    "已加载 14/14 ETF 日线数据"
   ],
-  "snapshot_id": "snap_etf_2026-06-20T22:29:22"
+  "snapshot_id": "snap_etf_2026-06-29T11:57:13"
 }
 ```
 
@@ -232,8 +238,8 @@ python3 ../skills/etf-daily/scripts/run_daily.py daily
 
 ### 教学点
 - **决策快照**会写入 `decision_snapshot` 表（`snapshot_id` 可追溯）
-- **数据过期**会触发 warning（阈值 80 分钟 = 1.3 小时）
-- **HOLD**：当前 1 持仓（512170），策略未触发买/卖
+- **数据过期**会触发 warning（**阈值 1500 分钟 = 25 小时**，B3 修复后从 80 分钟上调）
+- **BUY**：当前 0 持仓，策略触发买 top 5 候选（按 score 排序）
 
 ### 其他模式
 
@@ -464,7 +470,7 @@ python3 scripts/腐化自检.py --non-interactive --sprint=7
 1. `README.md` — 项目总览
 2. `QUICKSTART.md` — 5 分钟上手
 3. `docs/PRD.md` — 29 US + 7 Sprint
-4. `docs/ARCHITECTURE.md` — 13 模块依赖
+4. `docs/ARCHITECTURE.md` — **14** 模块依赖（**注意：v1 时代写的是 13，需更新**）
 5. `MEMORY.md` — v2 长期记忆（教训/决策）
 
 ### 选读（按角色）
@@ -488,7 +494,7 @@ etf_quant_v2/skills/stock-portfolio/scripts/run_portfolio.py
 新用户跑完本指南后，应能：
 
 - [ ] 理解 5 个 Skill 的职责分工
-- [ ] 跑通 217 个测试
+- [ ] 跑通 424 个测试（423 通过 + 1 已知失败 D-013.3）
 - [ ] 独立调用任意一个 Skill
 - [ ] 看懂 11 字段决策报告
 - [ ] 理解 4 验证器（Walk Forward / Monte Carlo / Cross ETF / Consistency）
@@ -506,14 +512,15 @@ etf_quant_v2/skills/stock-portfolio/scripts/run_portfolio.py
 **版本**：v2.0-final（基于 Sprint-7 业务完整化）
 **验证方法**：6 步全部实跑 + 输出捕获
 
-**实跑记录**：
-- Step 0：14 表 / Python 3.11.15 / 123 教训
-- Step 1：217 passed in 138.13s
+**实跑记录**（2026-06-29 全部实测）：
+
+- Step 0：14 表（trade_history 4/2real + decision_snapshot 4 + stock_info 66 + etf_names 1486）/ Python 3.11.15 / 123 教训
+- Step 1：423/424 passed in 95.32s（1 已知失败 D-013.3 + 1 skip）
 - Step 2：1 策略 + 123 教训 + 12 参考
-- Step 3：HOLD 1 持仓（512170）+ 数据过期警告
+- Step 3：BUY 决策（market_mode=trend_up / 0 持仓 / top 5 候选 score 0.52~0.73）+ 数据过期警告（5037 分钟/阈值 1500）
 - Step 4：综合分 0.426（未通过）— Walk Forward 0.33 + Cross ETF 0.33 是弱点
-- Step 5：业务闭环 OK（3 trades / 2 real）
-- Step +：8 维自检 100/100
+- Step 5：业务闭环 OK（4 trades / 2 real / 2 paper）
+- Step +：8 维自检（**网络超时未跑**，腐化自检需联网；这不是指南错）
 
 ---
 
